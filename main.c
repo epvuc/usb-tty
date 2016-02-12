@@ -86,7 +86,9 @@ int main(void)
 
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
-      printf("Commands available:\r\nhelp, wallaby, eedump\r\n");
+      printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
+      printf_P(PSTR("It is an experiment in using LUFA's CDC ACM class on atmega32u2\r\nand atmega32u4 in preparation for trying to port the USB-to-teletype\r\nadapter code from pjrc's cdc acm code to LUFA, so that I can run it\r\non the 32u2 chip I designed the adapter board for.\r\n")); 
+      printf_P(PSTR("Commands available:\r\nhelp, wallaby, eedump\r\n"));
     }
     
     if(strncmp(res, "eedump", 7) == 0) { 
@@ -175,6 +177,11 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 void EVENT_USB_Device_ControlRequest(void)
 {
 	CDC_Device_ProcessControlRequest(&VirtualSerial_CDC_Interface);
+}
+
+void EVENT_CDC_Device_BreakSent(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, uint8_t duration)
+{
+  printf("\r\n[%ums BREAK]\r\n");
 }
 
 /** Event handler for the CDC Class driver Line Encoding Changed event.
