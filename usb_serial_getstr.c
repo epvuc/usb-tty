@@ -1,8 +1,30 @@
 #include <stdint.h>
+#include "CDC_LUFA.h"
 
 char usb_serial_getchar(void);
 void usb_serial_putchar(char);
 
+extern USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface;
+
+void usb_serial_putchar(char c)
+{
+  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, (uint8_t)c);
+  CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+  USB_USBTask();       
+  // _delay_us(50);
+}
+
+char usb_serial_getchar(void)
+{
+  while(1) {
+    int16_t data1 = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+    if(!(data1<0))
+      return(data1);
+
+    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+    USB_USBTask();
+  }
+}
 
 int usb_serial_getstr(char *str, int count)
 { 

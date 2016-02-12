@@ -17,12 +17,13 @@
  */
 
 #include <string.h>
+#include <stdio.h>
 #include "CDC_LUFA.h"
 
 
 
 void ee_dump(void);
-
+void usbserial_tasks(void);
 int16_t received;
 uint8_t command, channel, data2;
 int status;
@@ -61,29 +62,9 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
-char usb_serial_getchar(void)
-{ 
-  while(1) { 
-    int16_t data1 = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-    if(!(data1<0))
-      return(data1);
-
-    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
-    USB_USBTask();	
-  }
-}
-
-void usb_serial_putchar(char c)
-{
-  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, (uint8_t)c);
-  CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
-  USB_USBTask();	
-  _delay_us(50);
-}
-
-FILE usb_cdc_str = FDEV_SETUP_STREAM(usb_serial_putchar, usb_serial_getchar, _FDEV_SETUP_RW);
 
 static char buf[128];
+static FILE USBSerialStream;
 
 int main(void)
 {
@@ -92,7 +73,8 @@ int main(void)
   SetupHardware();
   wdt_reset();
   GlobalInterruptEnable();
-  stdin = stdout = &usb_cdc_str;
+  CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
+  stdin = stdout = &USBSerialStream;
 
   while(1) { 
     valid = 0;
@@ -116,6 +98,7 @@ int main(void)
       valid = 1;
       for (n=1; n<6; n++) { 
 	printf("%u. This is a kind of dry baby melon powder.\r\n", n);
+	usbserial_tasks(); // make sure the whole thing makes it out via USB before the delay. 
 	_delay_ms(750);
       }
     }
@@ -255,5 +238,12 @@ void ee_dump(void)
     printf("%02x ", eeprom_read_byte(i));
   }
   printf("\r\n");
+}
+
+
+void usbserial_tasks(void)
+{ 
+  CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+  USB_USBTask();
 }
 
