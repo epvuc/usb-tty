@@ -21,6 +21,8 @@
 
 
 
+void ee_dump(void);
+
 int16_t received;
 uint8_t command, channel, data2;
 int status;
@@ -65,7 +67,7 @@ char usb_serial_getchar(void)
     int16_t data1 = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
     if(!(data1<0))
       return(data1);
-    
+
     CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
     USB_USBTask();	
   }
@@ -76,6 +78,7 @@ void usb_serial_putchar(char c)
   CDC_Device_SendByte(&VirtualSerial_CDC_Interface, (uint8_t)c);
   CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
   USB_USBTask();	
+  _delay_us(50);
 }
 
 FILE usb_cdc_str = FDEV_SETUP_STREAM(usb_serial_putchar, usb_serial_getchar, _FDEV_SETUP_RW);
@@ -98,11 +101,18 @@ int main(void)
     printf("\r\n");
     if (n==0) continue;
     res=strtok(buf, " ");
+
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
-      printf("This is the help command.\r\n");
+      printf("Commands available:\r\nhelp, wallaby, eedump\r\n");
     }
-    if(strncmp(res, "wallaby", 5) == 0) { 
+    
+    if(strncmp(res, "eedump", 7) == 0) { 
+      valid = 1;
+      ee_dump();
+    }
+
+    if(strncmp(res, "wallaby", 8) == 0) { 
       valid = 1;
       for (n=1; n<6; n++) { 
 	printf("%u. This is a kind of dry baby melon powder.\r\n", n);
@@ -218,7 +228,7 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 			break;
 	}
 
-        printf("\r\n[serial change to %lu bps]\r\n", CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
+        // printf("\r\n[serial change to %lu bps]\r\n", CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
 	/* Must turn off USART before reconfiguring it, otherwise incorrect operation may occur */
 	UCSR1B = 0;
 	UCSR1A = 0;
@@ -236,4 +246,14 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 
 
 
+void ee_dump(void)
+{
+  uint16_t i;
+  for (i=0; i<1024; i++) {
+    if (!(i % 16))
+      printf("\r\n%04x ", i);
+    printf("%02x ", eeprom_read_byte(i));
+  }
+  printf("\r\n");
+}
 
