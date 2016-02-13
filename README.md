@@ -19,3 +19,19 @@ the buffer fills with correctly received characters and doesn't ever freeze.
 This was because i was a fool and forgot to #include "softuart.h" so the function
 prototypes were wrong. 
 
+added test stuff to switch to and from commandline mode using "%" 
+
+still need to do:
+
+1. actual config mode: 
+
+enable/disable auto-cr, cr->crlf
+set auto-cr column? 
+select character set maps?
+speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate
+
+16000000 / 64 / (3 * 45.45) = 1833 // 60 WPM
+16000000 / 64 / (3 * 50.00) = 1667 // 66 WPM
+16000000 / 64 / (3 * 56.90) = 1464 // 75 WPM
+16000000 / 64 / (3 * 74.20) = 1123 // 100 WPM
+

@@ -1,21 +1,3 @@
-/**
- * Copyright (c) 2012 Alfredo Prado <droky@radikalbytes.com.com>. All rights reserved.
- *
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 #include <string.h>
 #include <stdio.h>
 #include "lufa_serial.h"
@@ -40,7 +22,7 @@ int status;
 
 /** LUFA CDC Class driver interface configuration and state information. This structure is
  *  passed to all CDC Class driver functions, so that multiple instances of the same class
- *  within a device can be differentiated from one another.
+ *  within a device can be differentiated from one another. stolen from droky@radikalbytes.com.com
  */
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
 	{
@@ -123,7 +105,10 @@ int main(void)
 	  }
 	}
       }
-      if (c == '%') commandline(); // just for testing.
+      if (c == '%') { 
+        commandline(); // just for testing.
+        column = 0;
+      }
     }
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
@@ -155,13 +140,25 @@ void commandline(void)
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
       printf_P(PSTR("It is an experiment in using LUFA's CDC ACM class on atmega32u2\r\nand atmega32u4 in preparation for trying to port the USB-to-teletype\r\nadapter code from pjrc's cdc acm code to LUFA, so that I can run it\r\non the 32u2 chip I designed the adapter board for.\r\n")); 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, wallaby, eedump, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, wallaby, eedump, 60wpm, 100wpm, exit\r\n"));
     }
 
     if(strncmp(res, "exit", 5) == 0) { 
       valid = 1;
       printf_P(PSTR("Returning to adapter mode.\r\n"));
       return;
+    }
+    
+    if(strncmp(res, "60wpm", 6) == 0) { 
+      valid = 1;
+      OCR1A = 1833;
+      printf_P(PSTR("Speed set to 60wpm / 45 baud.\r\n"));
+    }
+    
+    if(strncmp(res, "100wpm", 7) == 0) { 
+      valid = 1;
+      OCR1A = 1123;
+      printf_P(PSTR("Speed set to 100wpm / 75 baud.\r\n"));
     }
     
     if(strncmp(res, "eedump", 7) == 0) { 
