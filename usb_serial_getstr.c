@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "CDC_LUFA.h"
+#include "lufa_serial.h"
 
 char usb_serial_getchar(void);
 void usb_serial_putchar(char);
