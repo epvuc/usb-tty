@@ -2,6 +2,7 @@
 #define SOFTUART_BAUD_RATE      45
 
 // This is where we choose which IO pins to send and receive on
+// NOTE --- the TX settings here are ignored, it's overridden in softuart.c, sorry. fix later.
 #define SOFTUART_RXPIN   PIND
 #define SOFTUART_RXDDR   DDRD
 #define SOFTUART_RXBIT   PD2
@@ -9,6 +10,7 @@
 #define SOFTUART_TXPORT  PORTD
 #define SOFTUART_TXDDR   DDRD
 #define SOFTUART_TXBIT   PD6
+
 
 // which AVR timer to use? 
 #define SOFTUART_T_COMP_LABEL      TIMER1_COMPA_vect
