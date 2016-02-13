@@ -25,6 +25,7 @@ still need to do:
 
 1. actual config mode: 
 
+translating vs transparent mode, so you can use it with HeavyMetal in place of cp2102
 enable/disable auto-cr, cr->crlf
 set auto-cr column? 
 select character set maps?
