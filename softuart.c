@@ -270,7 +270,6 @@ void softuart_init( void )
 
 static void idle(void)
 {
-        usbserial_tasks();
 	// timeout handling goes here 
 	// - but there is a "softuart_kbhit" in this code...
 	// add watchdog-reset here if needed
