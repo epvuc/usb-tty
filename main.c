@@ -19,6 +19,8 @@
 #include <string.h>
 #include <stdio.h>
 #include "lufa_serial.h"
+#include "baudot.h"
+#include "softuart.h"
 
 #define SU_FALSE 0
 
@@ -29,6 +31,9 @@
 
 void ee_dump(void);
 void usbserial_tasks(void);
+int tty_putchar(char c, FILE *stream);
+void softuart_status(void);
+
 int16_t received;
 uint8_t command, channel, data2;
 int status;
@@ -75,6 +80,7 @@ int main(void)
 {
   uint8_t column = 0;
   int16_t c;
+  char in_char;
 
   SetupHardware();
   wdt_reset();
@@ -119,11 +125,11 @@ int main(void)
 
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
-      c=baudot_to_ascii(softuart_getchar());
-      if(c != 0) {
-        usb_serial_putchar(c);
-      }
+      in_char=baudot_to_ascii(softuart_getchar());
+      if(in_char != 0)
+        usb_serial_putchar(in_char);
     }
+
     // Process USB events. 
     usbserial_tasks();
   }
