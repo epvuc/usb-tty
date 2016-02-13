@@ -126,13 +126,6 @@ volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - thi
 #define set_tx_pin_high()      (PORTD |= _BV(3)|_BV(6)) // 3 is data, 6 is indicator
 #define set_tx_pin_low()       ( PORTD &= ~(_BV(3)|_BV(6)))
 
-#define trig_scope_on() (PORTD |= _BV(1))
-#define trig_scope_off() (PORTD &= ~_BV(1))
-
-//#define set_tx_pin_high()      ( SOFTUART_TXPORT |=  ( 1<<SOFTUART_TXBIT ) )
-//#define set_tx_pin_low()       ( SOFTUART_TXPORT &= ~( 1<<SOFTUART_TXBIT ) )
-
-
 // needs to be inverted if being fed through inverting optoisolator (6N139)
 // or normal if being fed directly
 #define get_rx_pin_status()    ( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )
@@ -152,8 +145,6 @@ ISR(SOFTUART_T_COMP_LABEL)
 	
 	// Transmitter Section
 	if ( flag_tx_ready ) {
-	  if (bits_left_in_tx == 8) trig_scope_on();
-	  if (bits_left_in_tx == 7) trig_scope_off();
 	  if ((bits_left_in_tx == 1) && (timer_tx_ctr == 2))
 	  	timer_tx_ctr=1;
 	  
