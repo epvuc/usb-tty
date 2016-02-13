@@ -87,8 +87,6 @@ int main(void)
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
   stdin = stdout = &USBSerialStream;
   sei();
-  tty_putchar('R', 0);
-  tty_putchar('Y', 0);
   while(1) { 
     // Have we been told to go into config mode?
     //    if (PORTB & (1<<1)) 
@@ -127,8 +125,7 @@ int main(void)
       }
     }
     // Process USB events. 
-    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
-    USB_USBTask();
+    usbserial_tasks();
   }
 }
 
