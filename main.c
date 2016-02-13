@@ -20,7 +20,12 @@
 #include <stdio.h>
 #include "lufa_serial.h"
 
+#define SU_FALSE 0
 
+// config flags
+#define CONF_CRLF 0x01
+#define CONF_AUTOCR 0x02
+#define CONF_UNSHIFT_ON_SPACE 0x04
 
 void ee_dump(void);
 void usbserial_tasks(void);
@@ -59,22 +64,78 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
 	};
 
 
-/** Main program entry point. This routine contains the overall program flow, including initial
- *  setup of all components and the main program loop.
- */
-
-static char buf[128];
+static char buf[64];
 static FILE USBSerialStream;
+
+extern volatile unsigned char  flag_tx_ready;
+uint8_t confflags=CONF_CRLF;
+
 
 int main(void)
 {
-  uint8_t n, valid;
-  char *res=NULL;
+  uint8_t column = 0;
+  int16_t c;
+
   SetupHardware();
   wdt_reset();
+
+  softuart_init();
+  // setup pins for softuart, led, etc. 
+  DDRD |= _BV(6) | _BV(3) | _BV(2);
+
   GlobalInterruptEnable();
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
   stdin = stdout = &USBSerialStream;
+  sei();
+  tty_putchar('R', 0);
+  tty_putchar('Y', 0);
+  while(1) { 
+    // Have we been told to go into config mode?
+    //    if (PORTB & (1<<1)) 
+    //      commandline();
+
+    // Do we have a character received from USB, to send to the TTY loop?
+    c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+    if ((flag_tx_ready == SU_FALSE) && (c > 0)) { 
+      // ASCII CR or LF ---> tty CR _and_ LF
+      // comment this out if you don't want that.
+      if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
+        tty_putchar('\r',0);
+        tty_putchar('\n',0);
+      } else
+        tty_putchar(c,0);
+      
+      // half-assed auto-CRLF. only works once we've seen the first newline
+      if((confflags & CONF_AUTOCR)) {
+        if(isprint(c))
+          column++;
+        if((c==0x0d) || (c==0x0a))
+          column=0;
+        if(column >= 68) {
+          tty_putchar('\r',0);
+          tty_putchar('\n',0);
+          column = 0;
+        }
+      }
+    }
+
+    // Do we have a character from the TTY loop ready to send to USB?
+    if (softuart_kbhit()) {
+      c=baudot_to_ascii(softuart_getchar());
+      if(c != 0) {
+        usb_serial_putchar(c);
+      }
+    }
+    // Process USB events. 
+    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+    USB_USBTask();
+  }
+}
+
+void commandline(void)
+{ 
+  uint8_t n, valid;
+  char *res=NULL;
 
   while(1) { 
     valid = 0;
@@ -83,7 +144,7 @@ int main(void)
     printf("\r\n");
     if (n==0) continue;
     res=strtok(buf, " ");
-
+    
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
@@ -95,7 +156,7 @@ int main(void)
       valid = 1;
       ee_dump();
     }
-
+    
     if(strncmp(res, "wallaby", 8) == 0) { 
       valid = 1;
       for (n=1; n<6; n++) { 
@@ -108,8 +169,6 @@ int main(void)
       printf("No such command.\r\n");
   }
 }
-
-
 
 /** Configures the board hardware and chip peripherals */
 void SetupHardware(void)
