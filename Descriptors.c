@@ -60,7 +60,7 @@ const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 
 	.ManufacturerStrIndex   = STRING_ID_Manufacturer,
 	.ProductStrIndex        = STRING_ID_Product,
-	.SerialNumStrIndex      = USE_INTERNAL_SERIAL,
+	.SerialNumStrIndex      = STRING_ID_Serial,
 
 	.NumberOfConfigurations = FIXED_NUM_CONFIGURATIONS
 };
@@ -161,7 +161,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 			.EndpointAddress        = CDC_RX_EPADDR,
 			.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 			.EndpointSize           = CDC_TXRX_EPSIZE,
-			.PollingIntervalMS      = 0x0A
+			.PollingIntervalMS      = 0x05
 		},
 
 	.CDC_DataInEndpoint =
@@ -171,7 +171,7 @@ const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 			.EndpointAddress        = CDC_TX_EPADDR,
 			.Attributes             = (EP_TYPE_BULK | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 			.EndpointSize           = CDC_TXRX_EPSIZE,
-			.PollingIntervalMS      = 0x0A
+			.PollingIntervalMS      = 0x05
 		}
 };
 
@@ -192,6 +192,7 @@ const USB_Descriptor_String_t PROGMEM ManufacturerString = USB_STRING_DESCRIPTOR
  *  Descriptor.
  */
 const USB_Descriptor_String_t PROGMEM ProductString = USB_STRING_DESCRIPTOR(L"Sloth Device");
+const USB_Descriptor_String_t PROGMEM SerialString = USB_STRING_DESCRIPTOR(L"31337");
 
 /** This function is called by the library when in device mode, and must be overridden (see library "USB Descriptors"
  *  documentation) by the application code so that the address and size of a requested descriptor can be given
@@ -233,6 +234,10 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 				case STRING_ID_Product:
 					Address = &ProductString;
 					Size    = pgm_read_byte(&ProductString.Header.Size);
+					break;
+				case STRING_ID_Serial:
+					Address = &SerialString;
+					Size    = pgm_read_byte(&SerialString.Header.Size);
 					break;
 			}
 
