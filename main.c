@@ -18,7 +18,7 @@
 
 #include <string.h>
 #include <stdio.h>
-#include "CDC_LUFA.h"
+#include "lufa_serial.h"
 
 
 
@@ -121,20 +121,8 @@ void SetupHardware(void)
 	/* Disable clock division */
 	clock_prescale_set(clock_div_1);
 
-	/* LEDs */
-	DDRC |= (1<<6); //PC6 MIDI
-	DDRC |= (1<<7); //PC7 USB
-
-	/* LEDs OFF */
-	MIDI_LED_OFF();
-	USB_LED_OFF();
-
 	/* Hardware Initialization */
 	USB_Init();
-	MIDI_LED_ON();
-	_delay_ms(150);
-	MIDI_LED_OFF();
-
 }
 
 
@@ -148,29 +136,18 @@ void SetupHardware(void)
 /** Event handler for the library USB Connection event. */
 void EVENT_USB_Device_Connect(void)
 {
-	USB_LED_ON();
 }
 
 /** Event handler for the library USB Disconnection event. */
 void EVENT_USB_Device_Disconnect(void)
 {
-	USB_LED_OFF();
 }
 
 /** Event handler for the library USB Configuration Changed event. */
 void EVENT_USB_Device_ConfigurationChanged(void)
 {
 	bool ConfigSuccess = true;
-	uint8_t ff;
 	ConfigSuccess &= CDC_Device_ConfigureEndpoints(&VirtualSerial_CDC_Interface);
-	for (ff=0;ff<6;ff++)
-	{
-			MIDI_LED_ON();
-			_delay_ms(25);
-			MIDI_LED_OFF();
-			_delay_ms(25);
-	}
-
 }
 
 /** Event handler for the library USB Control Request reception event. */
@@ -181,7 +158,8 @@ void EVENT_USB_Device_ControlRequest(void)
 
 void EVENT_CDC_Device_BreakSent(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, uint8_t duration)
 {
-  printf("\r\n[%ums BREAK]\r\n");
+  if (duration > 0) 
+    printf("\r\n[%ums BREAK]\r\n", duration);
 }
 
 /** Event handler for the CDC Class driver Line Encoding Changed event.
@@ -190,6 +168,7 @@ void EVENT_CDC_Device_BreakSent(USB_ClassInfo_CDC_Device_t* const CDCInterfaceIn
  */
 void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
 {
+#if 0
 	uint8_t ConfigMask = 0;
 
 	switch (CDCInterfaceInfo->State.LineEncoding.ParityType)
@@ -231,6 +210,7 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 	UCSR1C = ConfigMask;
 	UCSR1A = (1 << U2X1);
 	UCSR1B = ((1 << RXCIE1) | (1 << TXEN1) | (1 << RXEN1));
+#endif
 }
 
 
