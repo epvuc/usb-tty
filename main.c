@@ -123,6 +123,7 @@ int main(void)
 	  }
 	}
       }
+      if (c == '%') commandline(); // just for testing.
     }
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
@@ -154,7 +155,13 @@ void commandline(void)
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
       printf_P(PSTR("It is an experiment in using LUFA's CDC ACM class on atmega32u2\r\nand atmega32u4 in preparation for trying to port the USB-to-teletype\r\nadapter code from pjrc's cdc acm code to LUFA, so that I can run it\r\non the 32u2 chip I designed the adapter board for.\r\n")); 
-      printf_P(PSTR("Commands available:\r\nhelp, wallaby, eedump\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, wallaby, eedump, exit\r\n"));
+    }
+
+    if(strncmp(res, "exit", 5) == 0) { 
+      valid = 1;
+      printf_P(PSTR("Returning to adapter mode.\r\n"));
+      return;
     }
     
     if(strncmp(res, "eedump", 7) == 0) { 
