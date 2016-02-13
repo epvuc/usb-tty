@@ -99,30 +99,31 @@ int main(void)
     //      commandline();
 
     // Do we have a character received from USB, to send to the TTY loop?
-    c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-    if ((flag_tx_ready == SU_FALSE) && (c > 0)) { 
-      // ASCII CR or LF ---> tty CR _and_ LF
-      // comment this out if you don't want that.
-      if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
-        tty_putchar('\r',0);
-        tty_putchar('\n',0);
-      } else
-        tty_putchar(c,0);
-      
-      // half-assed auto-CRLF. only works once we've seen the first newline
-      if((confflags & CONF_AUTOCR)) {
-        if(isprint(c))
-          column++;
-        if((c==0x0d) || (c==0x0a))
-          column=0;
-        if(column >= 68) {
-          tty_putchar('\r',0);
-          tty_putchar('\n',0);
-          column = 0;
-        }
+    if (flag_tx_ready == SU_FALSE) { 
+      c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+      if (c > 0) { 
+	// ASCII CR or LF ---> tty CR _and_ LF
+	// comment this out if you don't want that.
+	if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
+	  tty_putchar('\r',0);
+	  tty_putchar('\n',0);
+	} else
+	  tty_putchar(c,0);
+	
+	// half-assed auto-CRLF. only works once we've seen the first newline
+	if((confflags & CONF_AUTOCR)) {
+	  if(isprint(c))
+	    column++;
+	  if((c==0x0d) || (c==0x0a))
+	    column=0;
+	  if(column >= 68) {
+	    tty_putchar('\r',0);
+	    tty_putchar('\n',0);
+	    column = 0;
+	  }
+	}
       }
     }
-
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
       in_char=baudot_to_ascii(softuart_getchar());
@@ -131,7 +132,8 @@ int main(void)
     }
 
     // Process USB events. 
-    usbserial_tasks();
+    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+    USB_USBTask();
   }
 }
 
