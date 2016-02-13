@@ -35,3 +35,5 @@ speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate
 16000000 / 64 / (3 * 56.90) = 1464 // 75 WPM
 16000000 / 64 / (3 * 74.20) = 1123 // 100 WPM
 
+Maybe a setting for inverting or not inverting the RX and/or TX sense? 
+
