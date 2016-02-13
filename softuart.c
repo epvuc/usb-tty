@@ -110,7 +110,7 @@ V0.3
 #define RX_NUM_OF_BITS (5)
 volatile static char              inbuf[SOFTUART_IN_BUF_SIZE];
 volatile static unsigned char    qin  = 0;
-/*volatile*/ static unsigned char qout = 0;
+volatile static unsigned char qout = 0;
 volatile static unsigned char    flag_rx_off;
 volatile static unsigned char    flag_rx_ready;
 
@@ -270,6 +270,7 @@ void softuart_init( void )
 
 static void idle(void)
 {
+        usbserial_tasks();
 	// timeout handling goes here 
 	// - but there is a "softuart_kbhit" in this code...
 	// add watchdog-reset here if needed
@@ -289,10 +290,11 @@ char softuart_getchar( void )
 {
 	char ch;
 
-	while ( qout == qin ) {
-		idle();
-	}
+        if (qout == qin)
+            return(0);
+
 	ch = inbuf[qout];
+ 
 	if ( ++qout >= SOFTUART_IN_BUF_SIZE ) {
 		qout = 0;
 	}
@@ -350,3 +352,15 @@ void softuart_puts_p( const char *prg_s )
 	}
 }
 
+char baudot_to_ascii(char);
+void softuart_status(void)
+{ 
+  uint8_t i;
+  char ascii_char;
+  printf("%u %u ", qin, qout);
+  for(i=0; i<SOFTUART_IN_BUF_SIZE; i++) {
+        ascii_char = baudot_to_ascii(inbuf[i]);
+	printf("%c", isprint(ascii_char)?ascii_char:'.');
+  }
+  printf("\r\n");
+} 
