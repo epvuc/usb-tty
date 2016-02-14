@@ -12,11 +12,12 @@
 #define CONF_UNSHIFT_ON_SPACE 0x04
 #define CONF_TRANSLATE 0x08
 
+// This is weird shit and the order these are declared in is critical.
 #define EEPROM_SECTION  __attribute__ ((section (".eeprom")))
 uint16_t dummy EEPROM_SECTION = 0; // voodoo, i dunno
-uint8_t eep_confflags EEPROM_SECTION = 0;
 uint16_t eep_baudtimer EEPROM_SECTION = 1833;
-
+uint16_t baudtmp;
+uint8_t eep_confflags EEPROM_SECTION = 0;
 uint8_t confflags; 
 
 void ee_dump(void);
@@ -65,8 +66,8 @@ int main(void)
   char in_char;
 
   // Read saved config settings from eeprom. 
-//  eeprom_read_block(&confflags, eep_confflags, sizeof(eep_confflags));
- // eeprom_read_block(&OCR1A, eep_baudtimer, sizeof(eep_baudtimer)); 
+  eeprom_read_block(&confflags, eep_confflags, sizeof(eep_confflags));
+  eeprom_read_block(&OCR1A, eep_baudtimer, sizeof(eep_baudtimer)); 
 
   SetupHardware(); // USB interface setup
   wdt_reset();
@@ -136,7 +137,6 @@ int main(void)
 void commandline(void)
 { 
   uint8_t n, valid;
-  uint16_t baudtmp;
   char *res=NULL;
 
   while(1) { 
@@ -150,7 +150,6 @@ void commandline(void)
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
-      printf_P(PSTR("It is an experiment in using LUFA's CDC ACM class on atmega32u2\r\nand atmega32u4 in preparation for trying to port the USB-to-teletype\r\nadapter code from pjrc's cdc acm code to LUFA, so that I can run it\r\non the 32u2 chip I designed the adapter board for.\r\n")); 
       printf_P(PSTR("\r\nCommands available:\r\nhelp, 60wpm, 100wpm, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
     }
 
@@ -172,7 +171,7 @@ void commandline(void)
       valid = 1;
       eeprom_read_block(&confflags, eep_confflags, sizeof(confflags));
       eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
-      OCR1A = baudtmp;
+      OCR1A = baudtmp; 
       printf_P(PSTR("Conf read from eeprom.\r\n"));
     }
 
@@ -197,7 +196,7 @@ void commandline(void)
       printf_P(PSTR("Unshift on space:       %c      %c\r\n"), 
 	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
 
-      printf_P(PSTR("Baud rate:              %lu   %lu\r\n"), 83333L/(unsigned long)OCR1A, 83333L/(unsigned long)baudtmp);
+      printf_P(PSTR("Baud rate:              %lu     %lu\r\n"), 83333L/(unsigned long)OCR1A, 83333L/(unsigned long)baudtmp);
     }
 	
     // confflags settings
