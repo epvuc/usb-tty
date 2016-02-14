@@ -14,16 +14,23 @@
 
 // This is weird shit and the order these are declared in is critical.
 #define EEPROM_SECTION  __attribute__ ((section (".eeprom")))
+
 uint16_t dummy EEPROM_SECTION = 0; // voodoo, i dunno
 uint16_t eep_baudtimer EEPROM_SECTION = 1833;
 uint16_t baudtmp;
 uint8_t eep_confflags EEPROM_SECTION = 0;
 uint8_t confflags; 
 
+#define NSPEEDS 4
+const uint16_t speeds[4][2] = { {45, 1833}, {50, 1667}, {56, 1464}, {75, 1123} };
+
+
 void ee_dump(void);
 void usbserial_tasks(void);
 int tty_putchar(char c, FILE *stream);
 void softuart_status(void);
+uint16_t divisor_to_baud(uint16_t);
+uint16_t baud_to_divisor(uint16_t);
 
 int16_t received;
 uint8_t command, channel, data2;
@@ -137,6 +144,8 @@ int main(void)
 void commandline(void)
 { 
   uint8_t n, valid;
+  uint8_t i;
+  uint16_t tmp;
   char *res=NULL;
 
   while(1) { 
@@ -150,7 +159,7 @@ void commandline(void)
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, 60wpm, 100wpm, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
     }
 
     if(strncmp(res, "exit", 5) == 0) { 
@@ -182,21 +191,23 @@ void commandline(void)
       printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
         confflags, saved, OCR1A, baudtmp);
 
-      printf_P(PSTR("Settings:               Cur     Saved\r\n"));
+      printf_P(PSTR("Settings:                               Cur     Saved\r\n"));
 
-      printf_P(PSTR("Translate ASCII/Baudot: %c      %c\r\n"), 
+      printf_P(PSTR("[no]translate   Translate ASCII/Baudot: %c      %c\r\n"), 
 	       (confflags & CONF_TRANSLATE)?'Y':'N', (saved & CONF_TRANSLATE)?'Y':'N');
 
-      printf_P(PSTR("CR or LF --> CR+LF:     %c      %c\r\n"), 
+      printf_P(PSTR("[no]crlf        CR or LF --> CR+LF:     %c      %c\r\n"), 
 	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
 
-      printf_P(PSTR("Auto CR at end of line: %c      %c\r\n"), 
+      printf_P(PSTR("[no]autocrlf    Auto CR at end of line: %c      %c\r\n"), 
 	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
 
-      printf_P(PSTR("Unshift on space:       %c      %c\r\n"), 
+      printf_P(PSTR("[no]usos        Unshift on space:       %c      %c\r\n"), 
 	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
 
-      printf_P(PSTR("Baud rate:              %lu     %lu\r\n"), 83333L/(unsigned long)OCR1A, 83333L/(unsigned long)baudtmp);
+      printf_P(PSTR("Baud rate:                              %u     %u\r\n"), 
+               divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
+      
     }
 	
     // confflags settings
@@ -245,17 +256,21 @@ void commandline(void)
       printf_P(PSTR("Unshift-on-space disabled.\r\n"));
     }
     
-    
-    if(strncmp(res, "60wpm", 6) == 0) { 
+    if(strncmp(res, "baud", 5) == 0) { 
       valid = 1;
-      OCR1A = 1833;
-      printf_P(PSTR("Speed set to 60wpm / 45 baud.\r\n"));
-    }
-    
-    if(strncmp(res, "100wpm", 7) == 0) { 
-      valid = 1;
-      OCR1A = 1123;
-      printf_P(PSTR("Speed set to 100wpm / 75 baud.\r\n"));
+      res = strtok(NULL, " ");
+      if (res != NULL) {
+	baudtmp = baud_to_divisor(atoi(res));
+	// if user entered a nonstandard baud rate, wing it.
+	if (baudtmp == 0) {
+	  printf_P(PSTR("Nonstandard baud rate selected, winging it.\r\n"));
+	  baudtmp = F_CPU / 64 / 3 / (unsigned long)tmp;
+	}
+	OCR1A = baudtmp;
+	printf_P(PSTR("Baud rate set to %s\r\n"), res);
+      } else  { 
+	printf_P(PSTR("baud <45|50|56|75>\r\n"));
+      }
     }
     
     if(strncmp(res, "eedump", 7) == 0) { 
@@ -391,3 +406,24 @@ void usbserial_tasks(void)
   USB_USBTask();
 }
 
+uint16_t divisor_to_baud(uint16_t divisor)
+{
+  uint8_t i;
+  uint16_t baud = 0;
+  for(i=0; i<NSPEEDS; i++) { 
+    if (speeds[i][1] == divisor)
+      baud = speeds[i][0];
+  }
+  return baud;
+}
+
+uint16_t baud_to_divisor(uint16_t baud)
+{
+  uint8_t i;
+  uint16_t divisor = 0;
+  for(i=0; i<NSPEEDS; i++) { 
+    if (speeds[i][0] == baud)
+      divisor = speeds[i][1];
+  }
+  return divisor;
+}
