@@ -129,7 +129,7 @@ volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - thi
 // needs to be inverted if being fed through inverting optoisolator (6N139)
 // or normal if being fed directly
 #define get_rx_pin_status()    ( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )
-// #define get_rx_pin_status()    (!( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )) // opto
+//#define get_rx_pin_status()    (!( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )) // opto
 
 ISR(SOFTUART_T_COMP_LABEL)
 {
