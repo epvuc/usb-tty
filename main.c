@@ -124,9 +124,9 @@ int main(void)
 	  tty_putchar_raw(c & 0x1F);
 	}
       }
-      if (c == '%') { 
+      if (c == '%') { // just for testing.
 	softuart_turn_rx_off();
-        commandline(); // just for testing.
+        commandline(); 
 	softuart_turn_rx_on();
         column = 0;
       }
@@ -194,24 +194,24 @@ void commandline(void)
       valid = 1;
       eeprom_read_block(&saved, eep_confflags, sizeof(saved));
       eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
-      printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
-        confflags, saved, OCR1A, baudtmp);
+      //printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
+      //     confflags, saved, OCR1A, baudtmp);
 
-      printf_P(PSTR("Settings:                               Cur     Saved\r\n"));
+      printf_P(PSTR("Settings:                                  Cur     Saved\r\n"));
 
-      printf_P(PSTR("[no]translate   Translate ASCII/Baudot: %c      %c\r\n"), 
+      printf_P(PSTR("[no]translate   Translate ASCII/Baudot:    %c      %c\r\n"), 
 	       (confflags & CONF_TRANSLATE)?'Y':'N', (saved & CONF_TRANSLATE)?'Y':'N');
 
-      printf_P(PSTR("[no]crlf        CR or LF --> CR+LF:     %c      %c\r\n"), 
+      printf_P(PSTR("[no]crlf        CR or LF --> CR+LF:        %c      %c\r\n"), 
 	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
 
-      printf_P(PSTR("[no]autocrlf    Auto CR at end of line: %c      %c\r\n"), 
+      printf_P(PSTR("[no]autocrlf    Auto CR at end of line:    %c      %c\r\n"), 
 	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
 
-      printf_P(PSTR("[no]usos        Unshift on space:       %c      %c\r\n"), 
+      printf_P(PSTR("[no]usos        Unshift on space:          %c      %c\r\n"), 
 	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
 
-      printf_P(PSTR("Baud rate:                              %u     %u\r\n"), 
+      printf_P(PSTR("baud N          Baud rate:                 %u     %u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
       
     }
@@ -270,10 +270,10 @@ void commandline(void)
 	// if user entered a nonstandard baud rate, wing it.
 	if (baudtmp == 0) {
 	  printf_P(PSTR("Nonstandard baud rate selected, winging it.\r\n"));
-	  baudtmp = F_CPU / 64 / 3 / (unsigned long)tmp;
+	  baudtmp = F_CPU / 64 / 3 / (unsigned long)atoi(res);
 	}
+	printf_P(PSTR("Baud rate set to %s (divisor %u)\r\n"), res, baudtmp);
 	set_softuart_divisor(baudtmp);
-	printf_P(PSTR("Baud rate set to %s\r\n"), res);
       } else  { 
 	printf_P(PSTR("baud <45|50|56|75>\r\n"));
       }
@@ -436,8 +436,6 @@ uint16_t baud_to_divisor(uint16_t baud)
 
 void set_softuart_divisor(uint16_t divisor)
 { 
-  softuart_turn_rx_off();
   TCNT1 = 0;
   OCR1A = divisor;
-  softuart_turn_rx_on();
 } 

@@ -241,7 +241,8 @@ static void avr_timer_init(void)
 	OCR1A = 1833; // 16MHZ/64/(3 * 45.45 baud) = 1833.5166
 	TCCR1A = 0;
 	TCCR1B = _BV(WGM12)|_BV(CS11)|_BV(CS10); // WGM=CTC mode, clk prescale = /64
-	TIMSK1 |= TIMSK1 |= _BV(OCIE1A)|_BV(TOIE1);
+	// TIMSK1 |= TIMSK1 |= _BV(OCIE1A)|_BV(TOIE1); // How did this ever even work??? Wtf
+	TIMSK1 |= _BV(OCIE1A)|_BV(TOIE1);
 	TCNT1 = 0;
 }
 
