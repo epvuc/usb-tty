@@ -155,7 +155,7 @@ void commandline(void)
 
   while(1) { 
     valid = 0;
-    printf("heepy> ");
+    printf("cmd> ");
     n = usb_serial_getstr(buf, 127);
     printf("\r\n");
     if (n==0) continue;
@@ -282,6 +282,11 @@ void commandline(void)
       valid = 1;
       ee_dump();
     }
+
+    if(strncmp(res, "eewipe", 7) == 0) { 
+      valid = 1;
+      ee_wipe();
+    }
     
     if(valid == 0)
       printf("No such command.\r\n");
@@ -401,6 +406,21 @@ void ee_dump(void)
       printf("\r\n%04x ", i);
     printf("%02x ", eeprom_read_byte(i));
   }
+  printf("\r\n");
+}
+void ee_wipe(void)
+{
+  uint16_t i;
+  memset(buf, 0xFF, 64);
+  for (i=0; i<1024; i=i+64) {
+    usb_serial_putchar('.');
+    eeprom_write_block(buf, i, 64);
+  }
+  // put in some sane defaults or it will hang on next boot.
+  i = 1833;
+  eeprom_write_block(&i, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
+  i = CONF_TRANSLATE | CONF_CRLF;
+  eeprom_write_block(&i, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
   printf("\r\n");
 }
 
