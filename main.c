@@ -12,13 +12,12 @@
 #define CONF_UNSHIFT_ON_SPACE 0x04
 #define CONF_TRANSLATE 0x08
 
-// This is weird shit and the order these are declared in is critical.
-#define EEPROM_SECTION  __attribute__ ((section (".eeprom")))
+#define EEP_BAUDDIV_LOCATION 0
+#define EEP_BAUDDIV_SIZE 2
+#define EEP_CONFFLAGS_LOCATION 2
+#define EEP_CONFFLAGS_SIZE 1
 
-uint16_t dummy EEPROM_SECTION = 0; // voodoo, i dunno
-uint16_t eep_baudtimer EEPROM_SECTION = 1833;
 uint16_t baudtmp;
-uint8_t eep_confflags EEPROM_SECTION = 0;
 uint8_t confflags; 
 
 #define NSPEEDS 4
@@ -74,7 +73,7 @@ int main(void)
   char in_char;
 
   // Read saved config settings from eeprom. 
-  eeprom_read_block(&confflags, eep_confflags, sizeof(eep_confflags));
+  eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
 
 
   SetupHardware(); // USB interface setup
@@ -84,7 +83,7 @@ int main(void)
   DDRD |= _BV(6) | _BV(3);
   GlobalInterruptEnable();
   
-  eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer)); 
+  eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
   set_softuart_divisor(baudtmp);
 
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
@@ -176,24 +175,24 @@ void commandline(void)
     // save/load/show settings
     if(strncmp(res, "save", 5) == 0) { 
       valid = 1;
-      eeprom_write_block(&confflags, eep_confflags, sizeof(eep_confflags));
+      eeprom_write_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
       baudtmp = OCR1A; 
-      eeprom_write_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      eeprom_write_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
       printf_P(PSTR("Conf saved to eeprom.\r\n"));
     }
 
     if(strncmp(res, "load", 5) == 0) { 
       valid = 1;
-      eeprom_read_block(&confflags, eep_confflags, sizeof(confflags));
-      eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+      eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
       set_softuart_divisor(baudtmp);
       printf_P(PSTR("Conf read from eeprom.\r\n"));
     }
 
     if(strncmp(res, "show", 5) == 0) { 
       valid = 1;
-      eeprom_read_block(&saved, eep_confflags, sizeof(saved));
-      eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      eeprom_read_block(&saved, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+      eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
       //printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
       //     confflags, saved, OCR1A, baudtmp);
 
@@ -420,6 +419,8 @@ uint16_t divisor_to_baud(uint16_t divisor)
     if (speeds[i][1] == divisor)
       baud = speeds[i][0];
   }
+  if (baud == 0)
+    baud = F_CPU / 64 / 3 / divisor;
   return baud;
 }
 
