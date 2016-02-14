@@ -32,6 +32,13 @@ int tty_putchar(char c, FILE *stream)
   return 0;
 }
 
+int tty_putchar_raw(char c)
+{ 
+  softuart_putchar(c);
+  return 0;
+}
+
+
 /* ASCII / BAUDOT conversions, with shifts */
 
 char ltrs[32] = { 0, 'E', 0x0A, 'A', ' ', 'S', 'I', 'U', 

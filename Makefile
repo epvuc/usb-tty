@@ -17,7 +17,8 @@ CPP	     = avr-g++
 all:
 
 program: $(TARGET).hex
-	avrdude -p $(MCU) -P /dev/ttyACM0  -c avr109    -U flash:w:$(TARGET).hex
+	# avrdude -p $(MCU) -P /dev/ttyACM0  -c avr109    -U flash:w:$(TARGET).hex
+	teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex
 
 # Include LUFA build script makefiles
 include $(LUFA_PATH)/Build/lufa_core.mk

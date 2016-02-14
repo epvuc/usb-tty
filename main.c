@@ -10,6 +10,14 @@
 #define CONF_CRLF 0x01
 #define CONF_AUTOCR 0x02
 #define CONF_UNSHIFT_ON_SPACE 0x04
+#define CONF_TRANSLATE 0x08
+
+#define EEPROM_SECTION  __attribute__ ((section (".eeprom")))
+uint16_t dummy EEPROM_SECTION = 0; // voodoo, i dunno
+uint8_t eep_confflags EEPROM_SECTION = 0;
+uint16_t eep_baudtimer EEPROM_SECTION = 1833;
+
+uint8_t confflags; 
 
 void ee_dump(void);
 void usbserial_tasks(void);
@@ -20,43 +28,35 @@ int16_t received;
 uint8_t command, channel, data2;
 int status;
 
-/** LUFA CDC Class driver interface configuration and state information. This structure is
- *  passed to all CDC Class driver functions, so that multiple instances of the same class
- *  within a device can be differentiated from one another. stolen from droky@radikalbytes.com.com
- */
-USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
-	{
-		.Config =
-			{
-				.ControlInterfaceNumber         = 0,
-				.DataINEndpoint                 =
-					{
-						.Address                = CDC_TX_EPADDR,
-						.Size                   = CDC_TXRX_EPSIZE,
-						.Banks                  = 1,
-					},
-				.DataOUTEndpoint                =
-					{
-						.Address                = CDC_RX_EPADDR,
-						.Size                   = CDC_TXRX_EPSIZE,
-						.Banks                  = 1,
-					},
-				.NotificationEndpoint           =
-					{
-						.Address                = CDC_NOTIFICATION_EPADDR,
-						.Size                   = CDC_NOTIFICATION_EPSIZE,
-						.Banks                  = 1,
-					},
-			},
-	};
+// LUFA CDC Class driver interface configuration and state information. stolen from droky@radikalbytes.com.com
+USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
+.Config = {
+    .ControlInterfaceNumber         = 0,
+    .DataINEndpoint = {
+      .Address                = CDC_TX_EPADDR,
+      .Size                   = CDC_TXRX_EPSIZE,
+      .Banks                  = 1,
+    },
+    .DataOUTEndpoint = {
+      .Address                = CDC_RX_EPADDR,
+      .Size                   = CDC_TXRX_EPSIZE,
+      .Banks                  = 1,
+    },
+    .NotificationEndpoint = {
+      .Address                = CDC_NOTIFICATION_EPADDR,
+      .Size                   = CDC_NOTIFICATION_EPSIZE,
+      .Banks                  = 1,
+    },
+  },
+};
 
-
-static char buf[64];
+static char buf[64]; // command line input buf
 static FILE USBSerialStream;
-
 extern volatile unsigned char  flag_tx_ready;
-uint8_t confflags=CONF_CRLF;
 
+uint8_t confflags = 0;
+uint8_t saved;
+uint16_t saved_baudtimer;
 
 int main(void)
 {
@@ -64,16 +64,19 @@ int main(void)
   int16_t c;
   char in_char;
 
-  SetupHardware();
-  wdt_reset();
+  // Read saved config settings from eeprom. 
+//  eeprom_read_block(&confflags, eep_confflags, sizeof(eep_confflags));
+ // eeprom_read_block(&OCR1A, eep_baudtimer, sizeof(eep_baudtimer)); 
 
+  SetupHardware(); // USB interface setup
+  wdt_reset();
   softuart_init();
   // setup pins for softuart, led, etc. 
-  DDRD |= _BV(6) | _BV(3) | _BV(2);
+  DDRD |= _BV(6) | _BV(3);
 
   GlobalInterruptEnable();
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
-  stdin = stdout = &USBSerialStream;
+  stdin = stdout = &USBSerialStream; // so printf, etc go to usb serial.
   sei();
   while(1) { 
     // Have we been told to go into config mode?
@@ -81,28 +84,32 @@ int main(void)
     //      commandline();
 
     // Do we have a character received from USB, to send to the TTY loop?
-    if (flag_tx_ready == SU_FALSE) { 
+    if (flag_tx_ready == SU_FALSE) { // Only pick a char from USB host if we're ready to process it.
       c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
       if (c > 0) { 
-	// ASCII CR or LF ---> tty CR _and_ LF
-	// comment this out if you don't want that.
-	if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
-	  tty_putchar('\r',0);
-	  tty_putchar('\n',0);
-	} else
-	  tty_putchar(c,0);
-	
-	// half-assed auto-CRLF. only works once we've seen the first newline
-	if((confflags & CONF_AUTOCR)) {
-	  if(isprint(c))
-	    column++;
-	  if((c==0x0d) || (c==0x0a))
-	    column=0;
-	  if(column >= 68) {
+	if (confflags & CONF_TRANSLATE) { 
+	  // ASCII CR or LF ---> tty CR _and_ LF
+	  if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
 	    tty_putchar('\r',0);
 	    tty_putchar('\n',0);
-	    column = 0;
+	  } else
+	    tty_putchar(c,0);
+	  
+	  // half-assed auto-CRLF. only works once we've seen the first newline
+	  if((confflags & CONF_AUTOCR)) {
+	    if(isprint(c))
+	      column++;
+	    if((c==0x0d) || (c==0x0a))
+	      column=0;
+	    if(column >= 68) {
+	      tty_putchar('\r',0);
+	      tty_putchar('\n',0);
+	      column = 0;
+	    }
 	  }
+	} else { 
+	  // we are in transparent mode, just pass the character through unchanged.
+	  tty_putchar_raw(c & 0x1F);
 	}
       }
       if (c == '%') { 
@@ -112,7 +119,10 @@ int main(void)
     }
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
-      in_char=baudot_to_ascii(softuart_getchar());
+      if (confflags & CONF_TRANSLATE) 
+	in_char = baudot_to_ascii(softuart_getchar());
+      else
+	in_char = softuart_getchar() & 0x1F;
       if(in_char != 0)
         usb_serial_putchar(in_char);
     }
@@ -126,6 +136,7 @@ int main(void)
 void commandline(void)
 { 
   uint8_t n, valid;
+  uint16_t baudtmp;
   char *res=NULL;
 
   while(1) { 
@@ -140,7 +151,7 @@ void commandline(void)
       valid = 1;
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
       printf_P(PSTR("It is an experiment in using LUFA's CDC ACM class on atmega32u2\r\nand atmega32u4 in preparation for trying to port the USB-to-teletype\r\nadapter code from pjrc's cdc acm code to LUFA, so that I can run it\r\non the 32u2 chip I designed the adapter board for.\r\n")); 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, wallaby, eedump, 60wpm, 100wpm, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, 60wpm, 100wpm, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
     }
 
     if(strncmp(res, "exit", 5) == 0) { 
@@ -148,6 +159,93 @@ void commandline(void)
       printf_P(PSTR("Returning to adapter mode.\r\n"));
       return;
     }
+    // save/load/show settings
+    if(strncmp(res, "save", 5) == 0) { 
+      valid = 1;
+      eeprom_write_block(&confflags, eep_confflags, sizeof(eep_confflags));
+      baudtmp = OCR1A; 
+      eeprom_write_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      printf_P(PSTR("Conf saved to eeprom.\r\n"));
+    }
+
+    if(strncmp(res, "load", 5) == 0) { 
+      valid = 1;
+      eeprom_read_block(&confflags, eep_confflags, sizeof(confflags));
+      eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      OCR1A = baudtmp;
+      printf_P(PSTR("Conf read from eeprom.\r\n"));
+    }
+
+    if(strncmp(res, "show", 5) == 0) { 
+      valid = 1;
+      eeprom_read_block(&saved, eep_confflags, sizeof(saved));
+      eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
+      printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
+        confflags, saved, OCR1A, baudtmp);
+
+      printf_P(PSTR("Settings:               Cur     Saved\r\n"));
+
+      printf_P(PSTR("Translate ASCII/Baudot: %c      %c\r\n"), 
+	       (confflags & CONF_TRANSLATE)?'Y':'N', (saved & CONF_TRANSLATE)?'Y':'N');
+
+      printf_P(PSTR("CR or LF --> CR+LF:     %c      %c\r\n"), 
+	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
+
+      printf_P(PSTR("Auto CR at end of line: %c      %c\r\n"), 
+	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
+
+      printf_P(PSTR("Unshift on space:       %c      %c\r\n"), 
+	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
+
+      printf_P(PSTR("Baud rate:              %lu   %lu\r\n"), 83333L/(unsigned long)OCR1A, 83333L/(unsigned long)baudtmp);
+    }
+	
+    // confflags settings
+    if(strncmp(res, "translate", 10) == 0) { 
+      valid = 1;
+      confflags |= CONF_TRANSLATE;
+      printf_P(PSTR("Set to ASCII/Baudot translate mode.\r\n"));
+    }
+      
+    if ((strncmp(res, "notranslate", 12) == 0) || (strncmp(res, "passthru", 9) == 0)) { 
+      valid = 1;
+      confflags &= ~CONF_TRANSLATE;
+      printf_P(PSTR("Set to passthru mode.\r\n"));
+    }
+
+    if(strncmp(res, "crlf", 5) == 0) { 
+      valid = 1;
+      confflags |= CONF_CRLF;
+      printf_P(PSTR("CR or LF --> CRLF.\r\n"));
+    }
+    if(strncmp(res, "nocrlf", 7) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_CRLF;
+      printf_P(PSTR("CR & LF independent.\r\n"));
+    }
+
+    if(strncmp(res, "autocr", 7) == 0) { 
+      valid = 1;
+      confflags |= CONF_AUTOCR;
+      printf_P(PSTR("Auto-CRLF at end of line.\r\n"));
+    }
+    if(strncmp(res, "noautocr", 6) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_AUTOCR;
+      printf_P(PSTR("No Auto-CRLF at end of line.\r\n"));
+    }
+    
+    if(strncmp(res, "usos", 5) == 0) { 
+      valid = 1;
+      confflags |= CONF_UNSHIFT_ON_SPACE;
+      printf_P(PSTR("Unshift-on-space enabled.\r\n"));
+    }
+    if(strncmp(res, "nousos", 7) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_UNSHIFT_ON_SPACE;
+      printf_P(PSTR("Unshift-on-space disabled.\r\n"));
+    }
+    
     
     if(strncmp(res, "60wpm", 6) == 0) { 
       valid = 1;
@@ -166,14 +264,6 @@ void commandline(void)
       ee_dump();
     }
     
-    if(strncmp(res, "wallaby", 8) == 0) { 
-      valid = 1;
-      for (n=1; n<6; n++) { 
-	printf("%u. This is a kind of dry baby melon powder.\r\n", n);
-	usbserial_tasks(); // make sure the whole thing makes it out via USB before the delay. 
-	_delay_ms(750);
-      }
-    }
     if(valid == 0)
       printf("No such command.\r\n");
   }
