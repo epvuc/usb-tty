@@ -31,6 +31,7 @@ int tty_putchar(char c, FILE *stream);
 void softuart_status(void);
 uint16_t divisor_to_baud(uint16_t);
 uint16_t baud_to_divisor(uint16_t);
+void set_softuart_divisor(uint16_t);
 
 int16_t received;
 uint8_t command, channel, data2;
@@ -74,15 +75,18 @@ int main(void)
 
   // Read saved config settings from eeprom. 
   eeprom_read_block(&confflags, eep_confflags, sizeof(eep_confflags));
-  eeprom_read_block(&OCR1A, eep_baudtimer, sizeof(eep_baudtimer)); 
+
 
   SetupHardware(); // USB interface setup
   wdt_reset();
   softuart_init();
   // setup pins for softuart, led, etc. 
   DDRD |= _BV(6) | _BV(3);
-
   GlobalInterruptEnable();
+  
+  eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer)); 
+  set_softuart_divisor(baudtmp);
+
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
   stdin = stdout = &USBSerialStream; // so printf, etc go to usb serial.
   sei();
@@ -121,7 +125,9 @@ int main(void)
 	}
       }
       if (c == '%') { 
+	softuart_turn_rx_off();
         commandline(); // just for testing.
+	softuart_turn_rx_on();
         column = 0;
       }
     }
@@ -180,7 +186,7 @@ void commandline(void)
       valid = 1;
       eeprom_read_block(&confflags, eep_confflags, sizeof(confflags));
       eeprom_read_block(&baudtmp, eep_baudtimer, sizeof(eep_baudtimer));
-      OCR1A = baudtmp; 
+      set_softuart_divisor(baudtmp);
       printf_P(PSTR("Conf read from eeprom.\r\n"));
     }
 
@@ -266,7 +272,7 @@ void commandline(void)
 	  printf_P(PSTR("Nonstandard baud rate selected, winging it.\r\n"));
 	  baudtmp = F_CPU / 64 / 3 / (unsigned long)tmp;
 	}
-	OCR1A = baudtmp;
+	set_softuart_divisor(baudtmp);
 	printf_P(PSTR("Baud rate set to %s\r\n"), res);
       } else  { 
 	printf_P(PSTR("baud <45|50|56|75>\r\n"));
@@ -427,3 +433,11 @@ uint16_t baud_to_divisor(uint16_t baud)
   }
   return divisor;
 }
+
+void set_softuart_divisor(uint16_t divisor)
+{ 
+  softuart_turn_rx_off();
+  TCNT1 = 0;
+  OCR1A = divisor;
+  softuart_turn_rx_on();
+} 
