@@ -16,6 +16,10 @@
 #define EEP_BAUDDIV_SIZE 2
 #define EEP_CONFFLAGS_LOCATION 2
 #define EEP_CONFFLAGS_SIZE 1
+// these will be used in the future for multiple and/or redefinable translation tables
+#define EEP_TABLE1_LTRS_LOCATION 128
+#define EEP_TABLE1_FIGS_LOCATION 160
+#define EEP_TABLE_SIZE 32
 
 uint16_t baudtmp;
 uint8_t confflags; 
