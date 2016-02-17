@@ -157,6 +157,7 @@ void commandline(void)
   uint16_t tmp;
   char *res=NULL;
 
+  help();
   while(1) { 
     valid = 0;
     printf("cmd> ");
@@ -167,8 +168,7 @@ void commandline(void)
     
     if(strncmp(res, "help", 5) == 0) { 
       valid = 1;
-      printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
+      help();
     }
 
     if(strncmp(res, "exit", 5) == 0) { 
@@ -464,3 +464,9 @@ void set_softuart_divisor(uint16_t divisor)
   TCNT1 = 0;
   OCR1A = divisor;
 } 
+
+void help(void)
+{ 
+      printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
+}
