@@ -1,4 +1,4 @@
-MCU          = atmega32u4
+MCU          = atmega32u2
 ARCH         = AVR8
 BOARD        = USER
 F_CPU        = 16000000
@@ -19,6 +19,14 @@ all:
 program: $(TARGET).hex
 	avrdude -p $(MCU) -P /dev/ttyACM0  -c avr109    -U flash:w:$(TARGET).hex
 	# teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex
+
+pteensy: $(TARGET).hex
+	teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex
+
+dfu: $(TARGET).hex
+	dfu-programmer $(MCU) erase
+	dfu-programmer $(MCU) flash main.hex
+	dfu-programmer $(MCU) reset
 
 # Include LUFA build script makefiles
 include $(LUFA_PATH)/Build/lufa_core.mk
