@@ -1,8 +1,12 @@
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <ctype.h>
+#include <avr/eeprom.h>
 #include "lufa_serial.h"
 #include "baudot.h"
 #include "softuart.h"
+#include "usb_serial_getstr.h"
 
 // config flags
 #define CONF_CRLF 0x01
@@ -30,7 +34,10 @@
 const uint16_t speeds[4][2] = { {45, 1833}, {50, 1667}, {56, 1464}, {75, 1123} };
 
 // function protos
+void help(void);
+void commandline(void);
 void ee_dump(void);
+void ee_wipe(void);
 void usbserial_tasks(void);
 int tty_putchar(char c, FILE *stream);
 void softuart_status(void);
@@ -94,7 +101,6 @@ int main(void)
     ee_wipe();  // Make sure there are valid config settings to load.
   // Read saved config settings from eeprom. 
   eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-
   eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
   set_softuart_divisor(baudtmp);
 
@@ -161,8 +167,6 @@ int main(void)
 void commandline(void)
 { 
   uint8_t n, valid;
-  uint8_t i;
-  uint16_t tmp;
   char *res=NULL;
 
   help();
