@@ -12,7 +12,7 @@
 
 #define EEP_CONFIGURED_LOCATION 0
 #define EEP_CONFIGURED_SIZE 2
-
+#define EEP_CONFIGURED_MAGIC 0x4545
 #define EEP_BAUDDIV_LOCATION 2
 #define EEP_BAUDDIV_SIZE 2
 
@@ -78,10 +78,10 @@ int main(void)
   uint8_t column = 0;
   int16_t c;
   char in_char;
+  uint16_t configured;
 
-  // Read saved config settings from eeprom. 
-  eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-
+  eeprom_read_block(&configured, EEP_CONFIGURED_LOCATION, EEP_CONFIGURED_SIZE);
+  
   SetupHardware(); // USB interface setup
   wdt_reset();
   softuart_init();
@@ -89,6 +89,12 @@ int main(void)
   DDRD |= _BV(6) | _BV(3);
   GlobalInterruptEnable();
   
+  // Check for magic number in eeprom to see if unit has valid configuration. 
+  if (configured != EEP_CONFIGURED_MAGIC) 
+    ee_wipe();  // Make sure there are valid config settings to load.
+  // Read saved config settings from eeprom. 
+  eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+
   eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
   set_softuart_divisor(baudtmp);
 
@@ -418,15 +424,17 @@ void ee_wipe(void)
 {
   uint16_t i;
   memset(buf, 0xFF, 64);
-  for (i=0; i<1024; i=i+64) {
+  for (i=0; i<128; i=i+64) { // only wipe first 128 bytes for now
     usb_serial_putchar('.');
     eeprom_write_block(buf, i, 64);
   }
   // put in some sane defaults or it will hang on next boot.
-  i = 1833;
+  i = 1833; // 45.45 baud
   eeprom_write_block(&i, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
   i = CONF_TRANSLATE | CONF_CRLF;
   eeprom_write_block(&i, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+  i = 0x4545;  // magic number to indicate device has a configuration
+  eeprom_write_block(&i, EEP_CONFIGURED_LOCATION, EEP_CONFIGURED_SIZE);
   printf("\r\n");
 }
 
