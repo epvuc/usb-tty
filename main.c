@@ -47,16 +47,11 @@ void set_softuart_divisor(uint16_t);
 
 // globals, clean this up. 
 extern volatile unsigned char  flag_tx_ready;
-uint16_t baudtmp;
-uint8_t confflags; 
-int16_t received;
-uint8_t command, channel, data2;
-int status;
 static char buf[64]; // command line input buf
-static FILE USBSerialStream;
+uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
-uint16_t saved_baudtimer;
+static FILE USBSerialStream;
 
 // LUFA CDC Class driver interface configuration and state information. stolen from droky@radikalbytes.com.com
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
@@ -83,11 +78,11 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
 int main(void)
 {
   uint8_t column = 0;
-  int16_t c;
+  char char_from_usb;
   char in_char;
   uint16_t configured;
 
-  eeprom_read_block(&configured, EEP_CONFIGURED_LOCATION, EEP_CONFIGURED_SIZE);
+  eeprom_read_block(&configured, (const void *)EEP_CONFIGURED_LOCATION, (size_t)EEP_CONFIGURED_SIZE);
   
   SetupHardware(); // USB interface setup
   wdt_reset();
@@ -100,8 +95,8 @@ int main(void)
   if (configured != EEP_CONFIGURED_MAGIC) 
     ee_wipe();  // Make sure there are valid config settings to load.
   // Read saved config settings from eeprom. 
-  eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-  eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
+  eeprom_read_block(&confflags, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
+  eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
   set_softuart_divisor(baudtmp);
 
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
@@ -114,21 +109,21 @@ int main(void)
 
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
-      c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-      if (c > 0) { 
+      char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+      if (char_from_usb > 0) { 
 	if (confflags & CONF_TRANSLATE) { 
 	  // ASCII CR or LF ---> tty CR _and_ LF
-	  if ((confflags & CONF_CRLF) && ((c==0x0d) || (c==0x0a))) {
+	  if ((confflags & CONF_CRLF) && ((char_from_usb==0x0d) || (char_from_usb==0x0a))) {
 	    tty_putchar('\r',0);
 	    tty_putchar('\n',0);
 	  } else
-	    tty_putchar(c,0);
+	    tty_putchar(char_from_usb,0);
 	  
 	  // half-assed auto-CRLF. only works once we've seen the first newline
 	  if((confflags & CONF_AUTOCR)) {
-	    if(isprint(c))
+	    if(isprint(char_from_usb))
 	      column++;
-	    if((c==0x0d) || (c==0x0a))
+	    if((char_from_usb==0x0d) || (char_from_usb==0x0a))
 	      column=0;
 	    if(column >= 68) {
 	      tty_putchar('\r',0);
@@ -138,10 +133,10 @@ int main(void)
 	  }
 	} else { 
 	  // we are in transparent mode, just pass the character through unchanged.
-	  tty_putchar_raw(c & 0x1F);
+	  tty_putchar_raw(char_from_usb & 0x1F);
 	}
       }
-      if (c == '%') { // just for testing.
+      if (char_from_usb == '%') { // just for testing.
 	softuart_turn_rx_off();
         commandline(); 
 	softuart_turn_rx_on();
@@ -191,26 +186,24 @@ void commandline(void)
     // save/load/show settings
     if(strncmp(res, "save", 5) == 0) { 
       valid = 1;
-      eeprom_write_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+      eeprom_write_block(&confflags, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       baudtmp = OCR1A; 
-      eeprom_write_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
+      eeprom_write_block(&baudtmp, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
       printf_P(PSTR("Conf saved to eeprom.\r\n"));
     }
 
     if(strncmp(res, "load", 5) == 0) { 
       valid = 1;
-      eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-      eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
+      eeprom_read_block(&confflags, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
+      eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
       set_softuart_divisor(baudtmp);
       printf_P(PSTR("Conf read from eeprom.\r\n"));
     }
 
     if(strncmp(res, "show", 5) == 0) { 
       valid = 1;
-      eeprom_read_block(&saved, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-      eeprom_read_block(&baudtmp, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
-      //printf("confflags=%02x, saved=%02x, baudtimer=%04x, saved_baudtimer=%04x\r\n", 
-      //     confflags, saved, OCR1A, baudtmp);
+      eeprom_read_block(&saved, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
+      eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
 
       printf_P(PSTR("Settings:                                  Cur     Saved\r\n"));
 
@@ -420,7 +413,7 @@ void ee_dump(void)
   for (i=0; i<1024; i++) {
     if (!(i % 16))
       printf("\r\n%04x ", i);
-    printf("%02x ", eeprom_read_byte(i));
+    printf("%02x ", eeprom_read_byte((const uint8_t *)i));
   }
   printf("\r\n");
 }
@@ -430,15 +423,15 @@ void ee_wipe(void)
   memset(buf, 0xFF, 64);
   for (i=0; i<128; i=i+64) { // only wipe first 128 bytes for now
     usb_serial_putchar('.');
-    eeprom_write_block(buf, i, 64);
+    eeprom_write_block(buf, (void *)i, (size_t)64);
   }
   // put in some sane defaults or it will hang on next boot.
   i = 1833; // 45.45 baud
-  eeprom_write_block(&i, EEP_BAUDDIV_LOCATION, EEP_BAUDDIV_SIZE);
+  eeprom_write_block(&i, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
   i = CONF_TRANSLATE | CONF_CRLF;
-  eeprom_write_block(&i, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
+  eeprom_write_block(&i, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
   i = 0x4545;  // magic number to indicate device has a configuration
-  eeprom_write_block(&i, EEP_CONFIGURED_LOCATION, EEP_CONFIGURED_SIZE);
+  eeprom_write_block(&i, (void *)EEP_CONFIGURED_LOCATION, (size_t)EEP_CONFIGURED_SIZE);
   printf("\r\n");
 }
 
