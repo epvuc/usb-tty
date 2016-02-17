@@ -213,7 +213,7 @@ void commandline(void)
       printf_P(PSTR("[no]crlf        CR or LF --> CR+LF:        %c      %c\r\n"), 
 	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
 
-      printf_P(PSTR("[no]autocrlf    Auto CR at end of line:    %c      %c\r\n"), 
+      printf_P(PSTR("[no]autocr      Auto CR at end of line:    %c      %c\r\n"), 
 	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
 
       printf_P(PSTR("[no]usos        Unshift on space:          %c      %c\r\n"), 
@@ -475,5 +475,5 @@ void set_softuart_divisor(uint16_t divisor)
 void help(void)
 { 
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocrlf, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, save, load, show, exit\r\n"));
 }
