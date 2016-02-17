@@ -4,30 +4,32 @@
 #include "baudot.h"
 #include "softuart.h"
 
-#define SU_FALSE 0
-
 // config flags
 #define CONF_CRLF 0x01
 #define CONF_AUTOCR 0x02
 #define CONF_UNSHIFT_ON_SPACE 0x04
 #define CONF_TRANSLATE 0x08
 
-#define EEP_BAUDDIV_LOCATION 0
+#define EEP_CONFIGURED_LOCATION 0
+#define EEP_CONFIGURED_SIZE 2
+
+#define EEP_BAUDDIV_LOCATION 2
 #define EEP_BAUDDIV_SIZE 2
-#define EEP_CONFFLAGS_LOCATION 2
+
+#define EEP_CONFFLAGS_LOCATION 4
 #define EEP_CONFFLAGS_SIZE 1
+
 // these will be used in the future for multiple and/or redefinable translation tables
 #define EEP_TABLE1_LTRS_LOCATION 128
 #define EEP_TABLE1_FIGS_LOCATION 160
 #define EEP_TABLE_SIZE 32
 
-uint16_t baudtmp;
-uint8_t confflags; 
-
+// These are just tested values that will override specific entered values. You can
+// set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
 #define NSPEEDS 4
 const uint16_t speeds[4][2] = { {45, 1833}, {50, 1667}, {56, 1464}, {75, 1123} };
 
-
+// function protos
 void ee_dump(void);
 void usbserial_tasks(void);
 int tty_putchar(char c, FILE *stream);
@@ -36,9 +38,18 @@ uint16_t divisor_to_baud(uint16_t);
 uint16_t baud_to_divisor(uint16_t);
 void set_softuart_divisor(uint16_t);
 
+// globals, clean this up. 
+extern volatile unsigned char  flag_tx_ready;
+uint16_t baudtmp;
+uint8_t confflags; 
 int16_t received;
 uint8_t command, channel, data2;
 int status;
+static char buf[64]; // command line input buf
+static FILE USBSerialStream;
+uint8_t confflags = 0;
+uint8_t saved;
+uint16_t saved_baudtimer;
 
 // LUFA CDC Class driver interface configuration and state information. stolen from droky@radikalbytes.com.com
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
@@ -62,14 +73,6 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
   },
 };
 
-static char buf[64]; // command line input buf
-static FILE USBSerialStream;
-extern volatile unsigned char  flag_tx_ready;
-
-uint8_t confflags = 0;
-uint8_t saved;
-uint16_t saved_baudtimer;
-
 int main(void)
 {
   uint8_t column = 0;
@@ -78,7 +81,6 @@ int main(void)
 
   // Read saved config settings from eeprom. 
   eeprom_read_block(&confflags, EEP_CONFFLAGS_LOCATION, EEP_CONFFLAGS_SIZE);
-
 
   SetupHardware(); // USB interface setup
   wdt_reset();
@@ -99,7 +101,7 @@ int main(void)
     //      commandline();
 
     // Do we have a character received from USB, to send to the TTY loop?
-    if (flag_tx_ready == SU_FALSE) { // Only pick a char from USB host if we're ready to process it.
+    if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
       c = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
       if (c > 0) { 
 	if (confflags & CONF_TRANSLATE) { 
