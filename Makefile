@@ -1,4 +1,4 @@
-MCU          = atmega32u4
+MCU          = atmega32u2
 ARCH         = AVR8
 BOARD        = USER
 F_CPU        = 16000000

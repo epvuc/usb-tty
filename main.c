@@ -28,6 +28,7 @@
 #define EEP_TABLE1_FIGS_LOCATION 160
 #define EEP_TABLE_SIZE 32
 
+#define CMDBUFLEN 64
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
 #define NSPEEDS 4
@@ -44,10 +45,11 @@ void softuart_status(void);
 uint16_t divisor_to_baud(uint16_t);
 uint16_t baud_to_divisor(uint16_t);
 void set_softuart_divisor(uint16_t);
+void ee_write(char *);
 
 // globals, clean this up. 
 extern volatile unsigned char  flag_tx_ready;
-static char buf[64]; // command line input buf
+static char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
@@ -168,7 +170,7 @@ void commandline(void)
   while(1) { 
     valid = 0;
     printf("cmd> ");
-    n = usb_serial_getstr(buf, 127);
+    n = usb_serial_getstr(buf, CMDBUFLEN-1);
     printf("\r\n");
     if (n==0) continue;
     res=strtok(buf, " ");
@@ -297,6 +299,14 @@ void commandline(void)
       ee_wipe();
     }
     
+    if(strncmp(res, "eewrite", 8) == 0) { 
+      valid = 1;
+      res = strtok(NULL, " ");
+      if(res != NULL) { 
+	ee_write(res);
+      } 
+    }
+
     if(valid == 0)
       printf("No such command.\r\n");
   }
@@ -315,8 +325,6 @@ void SetupHardware(void)
 	/* Hardware Initialization */
 	USB_Init();
 }
-
-
 
 /*********************************************************
  **                                                     **
@@ -404,9 +412,6 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 #endif
 }
 
-
-
-
 void ee_dump(void)
 {
   uint16_t i;
@@ -417,6 +422,7 @@ void ee_dump(void)
   }
   printf("\r\n");
 }
+
 void ee_wipe(void)
 {
   uint16_t i;
@@ -476,4 +482,40 @@ void help(void)
 { 
       printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
       printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, save, load, show, exit\r\n"));
+}
+
+uint8_t unhex(char h, char l)
+{
+  if(h > 70) h -= 32;
+  if(h > 57) h -= 7;
+  if(l > 70) l -= 32;
+  if(l > 57) l -= 7;
+  return ((h-48)<<4)+(l-48);
+}
+
+bool ishexchar(char c)
+{ 
+  if (c>70) c -= 32;
+  if (c<48) return (FALSE);
+  if (c>70) return (FALSE);
+  return (TRUE);
+}
+
+// leave this undocumented, it's not very safe, but might be useful someday
+// eewrite XXXX YY YY YY YY YY YY YY YY -- write bytes sequentially starting at XXXX
+void ee_write(char *buf)
+{ 
+  uint8_t i, j;
+  uint16_t eeaddr;
+  eeaddr = (unhex(buf[0], buf[1])<<8) + unhex(buf[2], buf[3]);
+  buf += 5; // leave a space after addr.
+  j=0;
+  for(i=0; 
+      ishexchar(buf[i]) && ishexchar(buf[i+1]) && i < strnlen(buf, CMDBUFLEN); 
+      i=i+3) {  // skip a space after each byte
+    printf_P(PSTR("%u (%04x): %u (%02X)\r\n"), eeaddr + j, eeaddr + j,
+	   unhex(buf[i], buf[i+1]), unhex(buf[i], buf[i+1]));
+    eeprom_write_byte(eeaddr + j, unhex(buf[i], buf[i+1]));
+    j++;
+  }
 }
