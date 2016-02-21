@@ -7,6 +7,10 @@ avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0x2f:m
 avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -U flash:w:BootloaderCDC.hex
 # set BOOTRST bit by changing hfuse from 0xD9 to 0xD8, so bootloader always
 # starts on powerup and decides for itself whether to jump to user app or not.
+avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd8:m
+# Program the actual application to the chip using the bootloader (avr109 type)
+# -- don't do it with the hardware programmer because it'll wipe the bootloader.
+make install
 
 -------------------------
 

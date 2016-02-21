@@ -18,7 +18,6 @@ all:
 
 program: $(TARGET).hex
 	avrdude -p $(MCU) -P /dev/ttyACM0  -c avr109    -U flash:w:$(TARGET).hex
-	# teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex
 
 pteensy: $(TARGET).hex
 	teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex
