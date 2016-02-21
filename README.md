@@ -1,3 +1,16 @@
+To work with my board, the default avr dfu bootloader has to be replaced
+with a different one that doesn't need HWB brought out, because i'm a dumbass.
+
+# erase chip and change lockbyte from 0x2c to 0x2f
+avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0x2f:m
+# write LUFA's CDC bootloader to boot area
+avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -U flash:w:BootloaderCDC.hex
+# set BOOTRST bit by changing hfuse from 0xD9 to 0xD8, so bootloader always
+# starts on powerup and decides for itself whether to jump to user app or not.
+
+-------------------------
+
+
 This is an attempt to get a useful USB CDC ACM endpoint on AVR using the 
 latest LUFA USB stack. Eventual target is atmega32u2 so I can use it on the
 usb-to-tty loop adapter board, but i only have a mega32u4 right now. It
