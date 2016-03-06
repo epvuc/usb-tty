@@ -1,4 +1,9 @@
-To work with my board, the default avr dfu bootloader has to be replaced
+quickstart: 
+
+signal from loop is received on PD2, signal toward loop output on PD3 and PD6
+(D6 is the onboard LED on a teensy).
+
+To work with custom board, the default avr dfu bootloader has to be replaced
 with a different one that doesn't need HWB brought out. Fine on teensy.
 
 # erase chip and change lockbyte from 0x2c to 0x2f
