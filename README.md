@@ -1,5 +1,5 @@
 To work with my board, the default avr dfu bootloader has to be replaced
-with a different one that doesn't need HWB brought out, because i'm a dumbass.
+with a different one that doesn't need HWB brought out. Fine on teensy.
 
 # erase chip and change lockbyte from 0x2c to 0x2f
 avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0x2f:m
@@ -17,8 +17,7 @@ make install
 
 This is an attempt to get a useful USB CDC ACM endpoint on AVR using the 
 latest LUFA USB stack. Eventual target is atmega32u2 so I can use it on the
-usb-to-tty loop adapter board, but i only have a mega32u4 right now. It
-works on that and compiles cleanly for 32u2, so maybe it'll be ok. 
+usb-to-tty loop adapter board. Compiles and works correctly on both 32u2 and 32u4.
 
 It needs the current LUFA distro from 
 http://www.github.com/abcminiuser/lufa/archive/LUFA-151115.zip
@@ -28,19 +27,13 @@ epv 2/11/2016
 
 2/13/16
 added softuart from usbtty2 project. 
-Sending works fine. 
-Receives the first char from the tty correctly, then freezes. 
-The ISR softuart receive works perfectly - if you don't call softuart_getchar()
-the buffer fills with correctly received characters and doesn't ever freeze. 
-
-This was because i was a fool and forgot to #include "softuart.h" so the function
-prototypes were wrong. 
+Sending and receiving work fine. 
 
 added test stuff to switch to and from commandline mode using "%" 
 
 still need to do:
 
-1. actual config mode: 
+1. actual config mode:  (done)
 
 translating vs transparent mode, so you can use it with HeavyMetal in place of cp2102
 enable/disable auto-cr, cr->crlf
@@ -55,3 +48,6 @@ speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate
 
 Maybe a setting for inverting or not inverting the RX and/or TX sense? 
 
+2. implement unshift on space, i think
+
+3. switch to/from config mode by hardware button vs "%" key. 
