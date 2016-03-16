@@ -123,8 +123,23 @@ volatile static unsigned char  timer_tx_ctr;
 volatile static unsigned char  bits_left_in_tx;
 volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - this was wrong */
 
-#define set_tx_pin_high()      (PORTD |= _BV(3)|_BV(6)) // 3 is data, 6 is indicator
-#define set_tx_pin_low()       ( PORTD &= ~(_BV(3)|_BV(6)))
+// #define set_tx_pin_high()      (PORTD |= _BV(3)|_BV(6)) // 3 is data, 6 is indicator
+// #define set_tx_pin_low()       ( PORTD &= ~(_BV(3)|_BV(6)))
+
+// data is D6, led1 is D0, led2 is D1
+void set_tx_pin_high(void)
+{ 
+  // data on, led0 on, led1 off
+  PORTD |= _BV(6)|_BV(0);  
+  PORTD &= ~_BV(1); 
+}
+void set_tx_pin_low(void)
+{
+  // data off, led0 off, led1 on
+  PORTD &= ~(_BV(6)| _BV(0)); 
+  PORTD |= _BV(1);
+}
+
 
 // needs to be inverted if being fed through inverting optoisolator (6N139)
 // or normal if being fed directly

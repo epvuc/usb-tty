@@ -1,0 +1,24 @@
+crystal = 16mhz
+
+Lock: default = 0b11101100 = 0xEC
+	no changes ?
+Efuse: default = 0b11110100 = 0xF4
+	no changes
+Hfuse: default = 11011001 = 0xD9 
+	EESAVE (3) = 0
+	BOOTSZ1 (2) = 0
+	BOOTSZ0 (1) = 0
+	BOOTRST (0) = 0
+			Hfuse = 0xD0
+
+Lfuse: default = 0b01011110 = 0x5E
+	CKDIV8 (7)  = 1
+	CKSEL3 (3) = 1
+	CKSEL2 (2) = 1
+	CKSEL1 (1) = 1
+			Lfuse = 0xDE
+
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0xec:m	
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U efuse:w:0xf4:m	
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd0:m	
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lfuse:w:0xde:m	

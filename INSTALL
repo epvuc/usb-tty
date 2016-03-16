@@ -1,0 +1,18 @@
+Set the fuses: 
+
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd0:m	
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lfuse:w:0xde:m	
+
+Install the bootloader:
+
+cd ~/git/avr-lufa/lufa/Bootloaders/CDC/
+make clean; make
+Connect ISP programmer and run: 
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U flash:w:BootloaderCDC.hex
+
+
+Install this software:
+Remove ISP programmer, connect only USB cable.
+cd ~/git/avr-lufa/lufa_serial/
+make clean; make
+make program
