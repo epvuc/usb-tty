@@ -1,21 +1,32 @@
 quickstart: 
 
-signal from loop is received on PD2, signal toward loop output on PD3 and PD6
-(D6 is the onboard LED on a teensy).
+signal from loop is received on PD4, signal toward loop output on PD6
+LED indicators are on D0 and D1, currently D0 shows outbound data and
+D1 shows inbound. 
 
 To work with custom board, the default avr dfu bootloader has to be replaced
-with a different one that doesn't need HWB brought out. Fine on teensy.
+with a different one that doesn't need HWB brought out. 
 
-# erase chip and change lockbyte from 0x2c to 0x2f
-avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0x2f:m
-# write LUFA's CDC bootloader to boot area
-avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -U flash:w:BootloaderCDC.hex
-# set BOOTRST bit by changing hfuse from 0xD9 to 0xD8, so bootloader always
-# starts on powerup and decides for itself whether to jump to user app or not.
-avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd8:m
-# Program the actual application to the chip using the bootloader (avr109 type)
-# -- don't do it with the hardware programmer because it'll wipe the bootloader.
-make install
+Set the fuses: 
+
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd0:m	
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lfuse:w:0xde:m	
+
+Install the bootloader:
+
+cd ~/git/avr-lufa/lufa/Bootloaders/CDC/
+make clean; make
+Connect ISP programmer and run: 
+avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U flash:w:BootloaderCDC.hex
+
+Install this software:
+Remove ISP programmer, connect only USB cable.
+cd ~/git/avr-lufa/lufa_serial/
+make clean; make
+make program
+
+If you program it using the ISP programmer afterward, you'll need to reinstall the
+bootloader too. 
 
 -------------------------
 
