@@ -90,7 +90,8 @@ int main(void)
   wdt_reset();
   softuart_init();
   // setup pins for softuart, led, etc. 
-  DDRD |= _BV(0) | _BV(1) | _BV(6);
+  DDRD |= _BV(0) | _BV(1) | _BV(6); // two leds and output to loop
+  DDRD &= ~_BV(4); // input from loop
   GlobalInterruptEnable();
   
   // Check for magic number in eeprom to see if unit has valid configuration. 
