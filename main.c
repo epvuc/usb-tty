@@ -92,6 +92,7 @@ int main(void)
   // setup pins for softuart, led, etc. 
   DDRD |= _BV(0) | _BV(1) | _BV(6); // two leds and output to loop
   DDRD &= ~_BV(4); // input from loop
+  DDRB &= ~_BV(7); // input from loop
   GlobalInterruptEnable();
   
   // Check for magic number in eeprom to see if unit has valid configuration. 
@@ -107,8 +108,8 @@ int main(void)
   sei();
   while(1) { 
     // Have we been told to go into config mode?
-    //    if (PORTB & (1<<1)) 
-    //      commandline();
+        if (!(PINB & (1<<7)) )
+          commandline();
 
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
