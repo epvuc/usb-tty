@@ -5,7 +5,7 @@
 // NOTE --- the TX settings here are ignored, it's overridden in softuart.c, sorry. fix later.
 #define SOFTUART_RXPIN   PIND
 #define SOFTUART_RXDDR   DDRD
-#define SOFTUART_RXBIT   PD2
+#define SOFTUART_RXBIT   PD4
 
 #define SOFTUART_TXPORT  PORTD
 #define SOFTUART_TXDDR   DDRD

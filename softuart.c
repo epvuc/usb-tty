@@ -129,22 +129,39 @@ volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - thi
 // data is D6, led1 is D0, led2 is D1
 void set_tx_pin_high(void)
 { 
-  // data on, led0 on, led1 off
-  PORTD |= _BV(6)|_BV(0);  
-  PORTD &= ~_BV(1); 
+  // data on, led0 on
+  PORTD |= _BV(6); // set data line on
+
+  PORTD |= _BV(0);  
+  //  PORTD &= ~_BV(1); 
 }
 void set_tx_pin_low(void)
 {
-  // data off, led0 off, led1 on
-  PORTD &= ~(_BV(6)| _BV(0)); 
-  PORTD |= _BV(1);
+  // data off, led0 off
+  PORTD &= ~_BV(6); // set data line off
+
+  PORTD &= ~_BV(0); 
+  //  PORTD |= _BV(1);
 }
 
+int8_t get_rx_pin_status(void)
+{
+  uint8_t val;
+  val = PIND & _BV(4);
+  // val = SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT );
+  if (val)
+    PORTD |= _BV(1);
+  else
+    PORTD &= ~_BV(1);
+  return (!val);
+}
 
 // needs to be inverted if being fed through inverting optoisolator (6N139)
 // or normal if being fed directly
-#define get_rx_pin_status()    ( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )
+// #define get_rx_pin_status()    ( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )
 //#define get_rx_pin_status()    (!( SOFTUART_RXPIN  & ( 1<<SOFTUART_RXBIT ) )) // opto
+
+
 
 ISR(SOFTUART_T_COMP_LABEL)
 {
@@ -226,9 +243,10 @@ ISR(SOFTUART_T_COMP_LABEL)
 static void avr_io_init(void)
 {
 	// TX-Pin as output (and indicator light)
-  SOFTUART_TXDDR |= _BV(6)|_BV(3);
+  SOFTUART_TXDDR |= _BV(7)|_BV(3);
 //	SOFTUART_TXDDR |=  ( 1 << SOFTUART_TXBIT );
 	// RX-Pin as input
+        DDRD &= ~_BV(4);
 	SOFTUART_RXDDR &= ~( 1 << SOFTUART_RXBIT );
 }
 
