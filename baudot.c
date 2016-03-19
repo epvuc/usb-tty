@@ -5,8 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 #include "baudot.h"
+#include "conf.h"
 
 extern char sendchar;
+extern uint8_t confflags; 
 
 // global state variables for baudot shift state
 // these get used in a bunch of places
@@ -64,6 +66,9 @@ char baudot_to_ascii(char b)
 	baudot_shift_rcv = LTRS;
 	return(0);
     }
+
+    if ((confflags & CONF_UNSHIFT_ON_SPACE) && (b == 0x04) ) // space
+      baudot_shift_rcv = LTRS;
     
     if (baudot_shift_rcv == LTRS) 
 	asc = ltrs[(uint8_t)b];

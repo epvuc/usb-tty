@@ -7,26 +7,7 @@
 #include "baudot.h"
 #include "softuart.h"
 #include "usb_serial_getstr.h"
-
-// config flags
-#define CONF_CRLF 0x01
-#define CONF_AUTOCR 0x02
-#define CONF_UNSHIFT_ON_SPACE 0x04
-#define CONF_TRANSLATE 0x08
-
-#define EEP_CONFIGURED_LOCATION 0
-#define EEP_CONFIGURED_SIZE 2
-#define EEP_CONFIGURED_MAGIC 0x4545
-#define EEP_BAUDDIV_LOCATION 2
-#define EEP_BAUDDIV_SIZE 2
-
-#define EEP_CONFFLAGS_LOCATION 4
-#define EEP_CONFFLAGS_SIZE 1
-
-// these will be used in the future for multiple and/or redefinable translation tables
-#define EEP_TABLE1_LTRS_LOCATION 128
-#define EEP_TABLE1_FIGS_LOCATION 160
-#define EEP_TABLE_SIZE 32
+#include "conf.h"
 
 #define CMDBUFLEN 64
 // These are just tested values that will override specific entered values. You can
@@ -81,7 +62,7 @@ int main(void)
 {
   uint8_t column = 0;
   char char_from_usb;
-  char in_char;
+  char char_from_tty;
   uint16_t configured;
 
   eeprom_read_block(&configured, (const void *)EEP_CONFIGURED_LOCATION, (size_t)EEP_CONFIGURED_SIZE);
@@ -108,8 +89,12 @@ int main(void)
   sei();
   while(1) { 
     // Have we been told to go into config mode?
-        if (!(PINB & (1<<7)) )
-          commandline();
+    if (!(PINB & (1<<7)) ) { 
+      softuart_turn_rx_off();
+      commandline(); 
+      softuart_turn_rx_on();
+      column = 0;
+    }
 
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
@@ -121,7 +106,7 @@ int main(void)
 	    tty_putchar('\r',0);
 	    tty_putchar('\n',0);
 	  } else
-	    tty_putchar(char_from_usb,0);
+	    tty_putchar(char_from_usb,0);  
 	  
 	  // half-assed auto-CRLF. only works once we've seen the first newline
 	  if((confflags & CONF_AUTOCR)) {
@@ -150,11 +135,11 @@ int main(void)
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
       if (confflags & CONF_TRANSLATE) 
-	in_char = baudot_to_ascii(softuart_getchar());
+	char_from_tty = baudot_to_ascii(softuart_getchar());
       else
-	in_char = softuart_getchar() & 0x1F;
-      if(in_char != 0)
-        usb_serial_putchar(in_char);
+	char_from_tty = softuart_getchar() & 0x1F;
+      if(char_from_tty != 0)
+        usb_serial_putchar(char_from_tty);
     }
 
     // Process USB events. 
