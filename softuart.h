@@ -83,3 +83,6 @@ void softuart_puts_p( const char *prg_s );
 // Helper-Macro - "automaticly" inserts PSTR
 // when used: include avr/pgmspace.h before this include-file
 #define softuart_puts_P(s___) softuart_puts_p(PSTR(s___))
+
+void send_break(void);
+

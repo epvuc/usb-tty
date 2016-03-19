@@ -1,5 +1,4 @@
-/* This has been modified to work with 5-bit teletype code, and will
-likely no longer work for 7 or 8 bit ASCII -- EPV */
+// NOTE: this is a modification by epv of Martin Thomas's softuart.c
 
 // softuart.c
 // AVR-port of the generic software uart written in C
@@ -100,6 +99,7 @@ V0.3
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
+#include <avr/delay.h>
 #include "softuart.h"
 #include "conf.h"
 
@@ -211,7 +211,9 @@ ISR(SOFTUART_T_COMP_LABEL)
 					// overflow - rst inbuf-index
 					qin = 0;
 				}
-			} else {if ((internal_rx_buffer == 0) && (get_rx_pin_status() == 0)) framing_error = 1; }// EPV BREAK
+			} else  // test for break condition -- EPV
+			  if ((internal_rx_buffer == 0) && (get_rx_pin_status() == 0)) framing_error = 1;
+			  else framing_error = 0;
 		}
 		else {  // rx_test_busy
 			if ( flag_rx_ready == SU_FALSE ) {
@@ -393,3 +395,12 @@ void softuart_status(void)
   }
   printf("\r\n");
 } 
+
+void send_break(void)
+{
+  softuart_turn_rx_off();
+  set_tx_pin_low();
+  _delay_ms(500);
+  set_tx_pin_high();
+  softuart_turn_rx_on();
+}
