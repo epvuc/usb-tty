@@ -208,6 +208,9 @@ void commandline(void)
       printf_P(PSTR("[no]usos        Unshift on space:          %c      %c\r\n"), 
 	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
 
+      printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
+	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
+
       printf_P(PSTR("baud N          Baud rate:                 %u     %u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
       
@@ -235,6 +238,17 @@ void commandline(void)
       valid = 1;
       confflags &= ~CONF_CRLF;
       printf_P(PSTR("CR & LF independent.\r\n"));
+    }
+
+    if(strncmp(res, "8bit", 5) == 0) { 
+      valid = 1;
+      confflags |= CONF_8BIT;
+      printf_P(PSTR("8 bit mode for m33.\r\n"));
+    }
+    if(strncmp(res, "no8bit", 7) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_8BIT;
+      printf_P(PSTR("normal mode for 5-level machines.\r\n"));
     }
 
     if(strncmp(res, "autocr", 7) == 0) { 
@@ -468,7 +482,7 @@ void set_softuart_divisor(uint16_t divisor)
 
 void help(void)
 { 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, [no]8bit, save, load, show, exit\r\n"));
 }
 
 #ifdef EEWRITE
