@@ -100,14 +100,13 @@ V0.3
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
-
 #include "softuart.h"
+#include "conf.h"
 
 #define SU_TRUE 1
 #define SU_FALSE 0
 
 // startbit and stopbit parsed internaly (see ISR)
-#define RX_NUM_OF_BITS (5)
 volatile static char              inbuf[SOFTUART_IN_BUF_SIZE];
 volatile static unsigned char    qin  = 0;
 volatile static unsigned char qout = 0;
@@ -116,15 +115,16 @@ volatile static unsigned char    flag_rx_ready;
 
 // 1 Startbit, 8 Databits, 1 Stopbit = 10 Bits/Frame
 // or for teletype, 1 start, 5 data, 2 stop = 8 bits/frame
-#define TX_NUM_OF_BITS (8)
+extern uint8_t rxbits, txbits; // epv
+#define TX_NUM_OF_BITS (txbits)
+#define RX_NUM_OF_BITS (rxbits)
 volatile unsigned char  flag_tx_ready;
+extern uint8_t confflags; // epv
+
 // volatile static unsigned char  flag_tx_ready;
 volatile static unsigned char  timer_tx_ctr;
 volatile static unsigned char  bits_left_in_tx;
 volatile static unsigned short internal_tx_buffer; /* ! mt: was type uchar - this was wrong */
-
-// #define set_tx_pin_high()      (PORTD |= _BV(3)|_BV(6)) // 3 is data, 6 is indicator
-// #define set_tx_pin_low()       ( PORTD &= ~(_BV(3)|_BV(6)))
 
 // data is D6, led1 is D0, led2 is D1
 void set_tx_pin_high(void)
@@ -177,8 +177,9 @@ ISR(SOFTUART_T_COMP_LABEL)
 	
 	// Transmitter Section
 	if ( flag_tx_ready ) {
-	  if ((bits_left_in_tx == 1) && (timer_tx_ctr == 2)) // short circuit state machine for tty use
-	  	timer_tx_ctr=1;
+	  if (!(confflags & CONF_8BIT))
+	    if ((bits_left_in_tx == 1) && (timer_tx_ctr == 2)) // short circuit state machine for tty use
+	      timer_tx_ctr=1;
 	  
 		tmp = timer_tx_ctr;
 		if ( --tmp <= 0 ) { // if ( --timer_tx_ctr <= 0 )
@@ -208,7 +209,7 @@ ISR(SOFTUART_T_COMP_LABEL)
 					// overflow - rst inbuf-index
 					qin = 0;
 				}
-			}
+			} // or else a framing error? - epv
 		}
 		else {  // rx_test_busy
 			if ( flag_rx_ready == SU_FALSE ) {
@@ -354,9 +355,11 @@ void softuart_putchar( const char ch )
 	// bits_left_in_tx includes 1 start + 2 stop bits, 
 	// so should be 8 for teletype. 
 	bits_left_in_tx    = TX_NUM_OF_BITS; 
-//	internal_tx_buffer = ( ch<<1 ) | 0x200;
+	if (confflags & CONF_8BIT)
+	  internal_tx_buffer = ( ch<<1 ) | 0x200;
+	else
 	// for teletype, word = Start, data 1-5, Stop, Stop
-	internal_tx_buffer = ( ch<<1 ) | 0xC0;
+	  internal_tx_buffer = ( ch<<1 ) | 0xC0;
 	flag_tx_ready      = SU_TRUE;
 }
 	
