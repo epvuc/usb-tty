@@ -35,6 +35,7 @@ uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
 static FILE USBSerialStream;
+volatile uint8_t txbits=8, rxbits=5;
 
 // LUFA CDC Class driver interface configuration and state information. stolen from droky@radikalbytes.com.com
 USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
@@ -96,6 +97,14 @@ int main(void)
       column = 0;
     }
 
+    // update rxbits/txbits for softuart between chars
+    if (confflags & CONF_8BIT) { 
+      rxbits = 8; txbits = 10; // ?? i dunno
+    } else {
+      rxbits = 5; txbits = 8;
+    }
+
+
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
       char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
@@ -114,7 +123,7 @@ int main(void)
 	      column++;
 	    if((char_from_usb==0x0d) || (char_from_usb==0x0a))
 	      column=0;
-	    if(column >= 68) {
+	    if(column >= 68) { // prob should be a config option
 	      tty_putchar('\r',0);
 	      tty_putchar('\n',0);
 	      column = 0;
@@ -122,7 +131,10 @@ int main(void)
 	  }
 	} else { 
 	  // we are in transparent mode, just pass the character through unchanged.
-	  tty_putchar_raw(char_from_usb & 0x1F);
+	  if (confflags & CONF_8BIT) 
+	    tty_putchar_raw(char_from_usb);
+	  else
+	    tty_putchar_raw(char_from_usb & 0x1F);
 	}
       }
       if (char_from_usb == '%') { // just for testing.
@@ -133,11 +145,15 @@ int main(void)
       }
     }
     // Do we have a character from the TTY loop ready to send to USB?
+    // should probably redo this in a way where we can distinguish NULL 
     if (softuart_kbhit()) {
       if (confflags & CONF_TRANSLATE) 
 	char_from_tty = baudot_to_ascii(softuart_getchar());
       else
-	char_from_tty = softuart_getchar() & 0x1F;
+	if (confflags & CONF_8BIT) 
+	  char_from_tty = softuart_getchar();
+	else
+	  char_from_tty = softuart_getchar() & 0x1F; // masking may not be necessary
       if(char_from_tty != 0)
         usb_serial_putchar(char_from_tty);
     }
@@ -156,7 +172,7 @@ void commandline(void)
   help();
   while(1) { 
     valid = 0;
-    printf("cmd> ");
+    printf("cmd %u %u> ", rxbits, txbits);
     n = usb_serial_getstr(buf, CMDBUFLEN-1);
     printf("\r\n");
     if (n==0) continue;
