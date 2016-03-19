@@ -184,7 +184,7 @@ void commandline(void)
   help();
   while(1) { 
     valid = 0;
-    printf("cmd %u %u> ", rxbits, txbits);
+    printf("cmd> ");
     n = usb_serial_getstr(buf, CMDBUFLEN-1);
     printf("\r\n");
     if (n==0) continue;
@@ -206,7 +206,7 @@ void commandline(void)
       eeprom_write_block(&confflags, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       baudtmp = OCR1A; 
       eeprom_write_block(&baudtmp, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
-      printf_P(PSTR("Conf saved to eeprom.\r\n"));
+      printf_P(PSTR("Settings saved.\r\n"));
     }
 
     if(strncmp(res, "load", 5) == 0) { 
@@ -214,7 +214,7 @@ void commandline(void)
       eeprom_read_block(&confflags, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
       set_softuart_divisor(baudtmp);
-      printf_P(PSTR("Conf read from eeprom.\r\n"));
+      printf_P(PSTR("Settings loaded.\r\n"));
     }
 
     if(strncmp(res, "show", 5) == 0) { 
@@ -271,11 +271,17 @@ void commandline(void)
     if(strncmp(res, "8bit", 5) == 0) { 
       valid = 1;
       confflags |= CONF_8BIT;
-      printf_P(PSTR("8 bit mode for m33.\r\n"));
+      confflags &= ~CONF_TRANSLATE;
+      printf_P(PSTR("8 bit mode for ascii machines.\r\n"));
     }
     if(strncmp(res, "no8bit", 7) == 0) { 
       valid = 1;
       confflags &= ~CONF_8BIT;
+      // turning on 8bit mode forces translate mode off.
+      // But on turning off 8bit mode, do we force translate mode on? I think it's better
+      // to revert to whatever setting the user has previously saved. 
+      eeprom_read_block(&saved, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
+      if (saved & CONF_TRANSLATE) confflags |= CONF_TRANSLATE;
       printf_P(PSTR("normal mode for 5-level machines.\r\n"));
     }
 
