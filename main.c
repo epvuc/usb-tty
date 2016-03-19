@@ -31,6 +31,7 @@ void ee_write(char *);
 // globals, clean this up. 
 extern volatile unsigned char  flag_tx_ready;
 extern volatile uint8_t framing_error;
+volatile uint8_t host_break = 0;
 
 static char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
@@ -63,7 +64,7 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface = {
 
 int main(void)
 {
-  uint8_t column = 0;
+  uint8_t column = 0, framing_error_last;
   char char_from_usb;
   char char_from_tty;
   uint16_t configured;
@@ -105,12 +106,17 @@ int main(void)
     } else {
       rxbits = 5; txbits = 8;
     }
+    // check for break condition
+    if ((framing_error == 0) && (framing_error_last == 1)) 
+      printf("[LOOP BREAK]\r\n");
+    framing_error_last = framing_error;
 
-    if (framing_error == 1) {
-      framing_error = 0;
-      printf("[BREAK]\r\n");
+    // check if USB host is trying to send a break. 
+    if (host_break == 1) { 
+      send_break();
+      host_break = 0;
     }
-
+    
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
       char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
@@ -382,7 +388,7 @@ void EVENT_USB_Device_ControlRequest(void)
 void EVENT_CDC_Device_BreakSent(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo, uint8_t duration)
 {
   if (duration > 0) 
-    printf("\r\n[%ums BREAK]\r\n", duration);
+    host_break = 1;
 }
 
 /** Event handler for the CDC Class driver Line Encoding Changed event.
