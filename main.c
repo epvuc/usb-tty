@@ -30,6 +30,8 @@ void ee_write(char *);
 
 // globals, clean this up. 
 extern volatile unsigned char  flag_tx_ready;
+extern volatile uint8_t framing_error;
+
 static char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
 uint8_t confflags = 0;
@@ -104,6 +106,10 @@ int main(void)
       rxbits = 5; txbits = 8;
     }
 
+    if (framing_error == 1) {
+      framing_error = 0;
+      printf("[BREAK]\r\n");
+    }
 
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.

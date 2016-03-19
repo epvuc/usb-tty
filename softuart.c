@@ -116,6 +116,8 @@ volatile static unsigned char    flag_rx_ready;
 // 1 Startbit, 8 Databits, 1 Stopbit = 10 Bits/Frame
 // or for teletype, 1 start, 5 data, 2 stop = 8 bits/frame
 extern uint8_t rxbits, txbits; // epv
+volatile uint8_t framing_error = 0; // epv
+
 #define TX_NUM_OF_BITS (txbits)
 #define RX_NUM_OF_BITS (rxbits)
 volatile unsigned char  flag_tx_ready;
@@ -209,7 +211,7 @@ ISR(SOFTUART_T_COMP_LABEL)
 					// overflow - rst inbuf-index
 					qin = 0;
 				}
-			} // or else a framing error? - epv
+			} else {if ((internal_rx_buffer == 0) && (get_rx_pin_status() == 0)) framing_error = 1; }// EPV BREAK
 		}
 		else {  // rx_test_busy
 			if ( flag_rx_ready == SU_FALSE ) {
