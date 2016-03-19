@@ -108,7 +108,7 @@ int main(void)
     // Do we have a character received from USB, to send to the TTY loop?
     if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
       char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-      if (char_from_usb > 0) { 
+      if (char_from_usb != 0xFF) { // usb cdc returns 0xFF when there's no char available.
 	if (confflags & CONF_TRANSLATE) { 
 	  // ASCII CR or LF ---> tty CR _and_ LF
 	  if ((confflags & CONF_CRLF) && ((char_from_usb==0x0d) || (char_from_usb==0x0a))) {
