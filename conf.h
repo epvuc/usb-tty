@@ -1,8 +1,9 @@
 // config flags                                                                                                              
-#define CONF_CRLF 0x01
-#define CONF_AUTOCR 0x02
-#define CONF_UNSHIFT_ON_SPACE 0x04
-#define CONF_TRANSLATE 0x08
+#define CONF_CRLF	(1<<0)
+#define CONF_AUTOCR	(1<<1)
+#define CONF_UNSHIFT_ON_SPACE (1<<2)
+#define CONF_TRANSLATE	 (1<<3)
+#define CONF_8BIT	 (1<<4)
 
 #define EEP_CONFIGURED_LOCATION 0
 #define EEP_CONFIGURED_SIZE 2
