@@ -8,7 +8,7 @@ TARGET       = main
 SRC          = $(TARGET).c baudot.c softuart.c usb_serial_getstr.c Descriptors.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = ../lufa/LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/
-LD_FLAGS     =
+LD_FLAGS     = -Wl,-u,vfprintf -lprintf_min 
 CC	     = avr-gcc
 
 CPP	     = avr-g++

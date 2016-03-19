@@ -177,7 +177,7 @@ ISR(SOFTUART_T_COMP_LABEL)
 	
 	// Transmitter Section
 	if ( flag_tx_ready ) {
-	  if ((bits_left_in_tx == 1) && (timer_tx_ctr == 2))
+	  if ((bits_left_in_tx == 1) && (timer_tx_ctr == 2)) // short circuit state machine for tty use
 	  	timer_tx_ctr=1;
 	  
 		tmp = timer_tx_ctr;
