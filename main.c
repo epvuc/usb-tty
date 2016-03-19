@@ -8,7 +8,7 @@
 #include "softuart.h"
 #include "usb_serial_getstr.h"
 #include "conf.h"
-
+#define EEWRITE
 #define CMDBUFLEN 64
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
@@ -286,6 +286,7 @@ void commandline(void)
       ee_wipe();
     }
     
+#ifdef EEWRITE
     if(strncmp(res, "eewrite", 8) == 0) { 
       valid = 1;
       res = strtok(NULL, " ");
@@ -293,7 +294,7 @@ void commandline(void)
 	ee_write(res);
       } 
     }
-
+#endif
     if(valid == 0)
       printf("No such command.\r\n");
   }
@@ -467,10 +468,10 @@ void set_softuart_divisor(uint16_t divisor)
 
 void help(void)
 { 
-      printf_P(PSTR("This is ssh://eric@limpoc.com:/home/eric/git/lufa_serial.git\r\n"));
       printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, save, load, show, exit\r\n"));
 }
 
+#ifdef EEWRITE
 uint8_t unhex(char h, char l)
 {
   if(h > 70) h -= 32;
@@ -506,3 +507,4 @@ void ee_write(char *buf)
     j++;
   }
 }
+#endif
