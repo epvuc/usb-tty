@@ -49,21 +49,26 @@ added test stuff to switch to and from commandline mode using "%"
 
 still need to do:
 
-1. actual config mode:  (done)
+1. actual config mode:  (implemented, still adding to it)
 
-translating vs transparent mode, so you can use it with HeavyMetal in place of cp2102
-enable/disable auto-cr, cr->crlf
-set auto-cr column? 
-select character set maps?
-speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate
+translating vs transparent mode, so you can use it with HeavyMetal in place of cp2102 (done)
+enable/disable auto-cr, cr->crlf (not sure i care)
+set auto-cr column?  (later)
+select character set maps? (later)
+speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate (done)
 
 16000000 / 64 / (3 * 45.45) = 1833 // 60 WPM
 16000000 / 64 / (3 * 50.00) = 1667 // 66 WPM
 16000000 / 64 / (3 * 56.90) = 1464 // 75 WPM
 16000000 / 64 / (3 * 74.20) = 1123 // 100 WPM
 
-Maybe a setting for inverting or not inverting the RX and/or TX sense? 
+Maybe a setting for inverting or not inverting the RX and/or TX sense?  (not sure i care)
 
 2. implement unshift on space, i think (done)
 
-3. switch to/from config mode by hardware button vs "%" key. 
+3. switch to/from config mode by hardware button vs "%" key.  (done)
+
+4. ASCII mode for m33's. (implemented, appears to work with linux serial port, no 33 to test with, need more framing info)
+   also no idea how real machines handle or don't handle parity.
+
+
