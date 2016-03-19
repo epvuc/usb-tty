@@ -64,6 +64,6 @@ speed? Might be able to set baud rate just by setting OCR1A = 83333 / baudrate
 
 Maybe a setting for inverting or not inverting the RX and/or TX sense? 
 
-2. implement unshift on space, i think
+2. implement unshift on space, i think (done)
 
 3. switch to/from config mode by hardware button vs "%" key. 
