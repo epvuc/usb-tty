@@ -91,6 +91,10 @@ int main(void)
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
   stdin = stdout = &USBSerialStream; // so printf, etc go to usb serial.
   sei();
+  // Here is a polling loop where we look for characters or events from either USB or TTY
+  // and relay to the other side. Nothing in this loop should block. well, send_break() does
+  // very briefly but it's ok. 
+
   while(1) { 
     // Have we been told to go into config mode?
     if (!(PINB & (1<<7)) ) { 
@@ -108,19 +112,20 @@ int main(void)
     }
     // check for break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
-      printf("[LOOP BREAK]\r\n");
+      printf("[BREAK]\r\n"); // What should I actually do here? 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
     if (host_break == 1) { 
-      send_break();
+      send_break(); // actually break the loop for 500ms
       host_break = 0;
     }
     
     // Do we have a character received from USB, to send to the TTY loop?
-    if (flag_tx_ready == 0) { // Only pick a char from USB host if we're ready to process it.
+    // Only pick a char from USB host if we're ready to process it. if not, it's the host's job to queue or block or whatever
+    if (flag_tx_ready == 0) { 
       char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
-      if (char_from_usb != 0xFF) { // usb cdc returns 0xFF when there's no char available.
+      if (char_from_usb != 0xFF) { // CDC_Device_ReceiveByte() returns 0xFF when there's no char available.
 	if (confflags & CONF_TRANSLATE) { 
 	  // ASCII CR or LF ---> tty CR _and_ LF
 	  if ((confflags & CONF_CRLF) && ((char_from_usb==0x0d) || (char_from_usb==0x0a))) {
@@ -145,7 +150,7 @@ int main(void)
 	  // we are in transparent mode, just pass the character through unchanged.
 	  if (confflags & CONF_8BIT) 
 	    tty_putchar_raw(char_from_usb);
-	  else
+	  else // not sure if i need to actually mask here, but let's be safe
 	    tty_putchar_raw(char_from_usb & 0x1F);
 	}
       }
@@ -156,8 +161,8 @@ int main(void)
         column = 0;
       }
     }
+
     // Do we have a character from the TTY loop ready to send to USB?
-    // should probably redo this in a way where we can distinguish NULL 
     if (softuart_kbhit()) {
       if (confflags & CONF_TRANSLATE) 
 	char_from_tty = baudot_to_ascii(softuart_getchar());
