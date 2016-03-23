@@ -17,12 +17,12 @@ int main(int argc, char **argv)
   int a = 128; // start of first table, LTRS first.
   
   for (i=0; i<32; i++) {
-    if (i%16 == 0) printf("\r\n%04x ", a);
+    if (i%16 == 0) printf("\r\neewrite %04x ", a);
     printf("%02x ", ltrs[i]);
     a++;
   }
   for (i=0; i<32; i++)  {
-    if (i%16 == 0) printf("\r\n%04x ", a);
+    if (i%16 == 0) printf("\r\neewrite %04x ", a);
     printf("%02x ", figs[i]);
     a++;
   }
