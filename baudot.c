@@ -4,11 +4,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <avr/eeprom.h>
 #include "baudot.h"
 #include "conf.h"
 
-extern char sendchar;
-extern uint8_t confflags; 
+extern uint8_t confflags;     // from main.c
+extern uint8_t tableselector; // from main.c
 
 // global state variables for baudot shift state
 // these get used in a bunch of places
@@ -43,6 +44,7 @@ int tty_putchar_raw(char c)
 
 /* ASCII / BAUDOT conversions, with shifts */
 
+/*  moving these to eeprom.
 char ltrs[32] = { 0, 'E', 0x0A, 'A', ' ', 'S', 'I', 'U', 
 		0x0D, 'D', 'R', 'J', 'N', 'F', 'C', 'K', 
 		'T', 'Z', 'L', 'W', 'H', 'Y', 'P', 'Q', 
@@ -52,6 +54,7 @@ char figs[32] = { 0, '3', 0x0A, '-', ' ', 7, '8', '7',
 		0x0D, '$', '4', 0x27, ',', '!', ':', '(', 
 		'5', '"', ')', '2', '#', '6', '0', '1', 
 		'9', '?', '&', 0, '.', '/', ';', 0 };
+*/
 
 // this is easy, because ascii >> baudot
 // Just keep track of LTRS/FIGS shift
@@ -71,9 +74,9 @@ char baudot_to_ascii(char b)
       baudot_shift_rcv = LTRS;
     
     if (baudot_shift_rcv == LTRS) 
-	asc = ltrs[(uint8_t)b];
+      asc = eeprom_read_byte(EEP_TABLES_START + (EEP_TABLE_SIZE * tableselector) + b);
     else if (baudot_shift_rcv == FIGS)
-	asc = figs[(uint8_t)b];
+      asc = eeprom_read_byte(EEP_TABLES_START + (EEP_TABLE_SIZE * tableselector) + FIGS_OFFSET + b);
 
     return(asc);
 } 
@@ -91,13 +94,13 @@ char ascii_to_baudot(char c)
 
     // search for the ascii char in both the letters and figs tables
     for(i=0; i<32; i++) { 
-	if (ltrs[i] == c) { 
-	  needcase = LTRS;  // we found it in the LTRS table
-	    b = i;
-	} else if (figs[i] == c) { 
-	  needcase = FIGS; // we found it in the FIGS table
-	    b = i;
-	}
+      if (eeprom_read_byte(EEP_TABLES_START + (EEP_TABLE_SIZE * tableselector) + i) == c) { 
+	needcase = LTRS;  // we found it in the LTRS table
+	b = i;
+      } else if (eeprom_read_byte(EEP_TABLES_START + (EEP_TABLE_SIZE * tableselector) + FIGS_OFFSET + i) == c) { 
+	needcase = FIGS; // we found it in the FIGS table
+	b = i;
+      }
     }
     // if called with a character that doesn't exist in Baudot,
     // or a null char, return a blank.

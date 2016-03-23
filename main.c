@@ -32,7 +32,7 @@ void ee_write(char *);
 extern volatile unsigned char  flag_tx_ready;
 extern volatile uint8_t framing_error;
 volatile uint8_t host_break = 0;
-
+uint8_t tableselector = 0; // which ascii/baudot translation table we're using
 static char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
 uint8_t confflags = 0;
