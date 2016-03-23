@@ -10,12 +10,14 @@
 #define EEP_CONFIGURED_MAGIC 0x4545
 #define EEP_BAUDDIV_LOCATION 2
 #define EEP_BAUDDIV_SIZE 2
-
 #define EEP_CONFFLAGS_LOCATION 4
 #define EEP_CONFFLAGS_SIZE 1
+#define EEP_TABLE_SELECT_LOCATION 5
+#define EEP_TABLE_SELECT_SIZE 1
 
-// these will be used in the future for multiple and/or redefinable translation tables                                       
+// these will be used for multiple and/or redefinable translation tables
 #define EEP_TABLES_START 128
 #define EEP_TABLE_SIZE 64
-#define FIGS_OFFSET 32
-
+#define FIGS_OFFSET 32 // for each table, LTRS table is first, then FIGS table @32
+// atmega16u2 will have room for 6 tables, 32u2 will fit 14. Should be more than
+// enough. I'm not doing 6 bit support unless someone really reallly needs it. 

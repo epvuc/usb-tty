@@ -82,11 +82,13 @@ int main(void)
   
   // Check for magic number in eeprom to see if unit has valid configuration. 
   if (configured != EEP_CONFIGURED_MAGIC) 
-    ee_wipe();  // Make sure there are valid config settings to load.
+    ee_wipe();  // Make sure there are valid config settings, baud, and tables
+
   // Read saved config settings from eeprom. 
   eeprom_read_block(&confflags, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
   eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
   set_softuart_divisor(baudtmp);
+  tableselector = eeprom_read_byte(EEP_TABLE_SELECT_LOCATION);
 
   CDC_Device_CreateStream(&VirtualSerial_CDC_Interface, &USBSerialStream);
   stdin = stdout = &USBSerialStream; // so printf, etc go to usb serial.
@@ -211,6 +213,7 @@ void commandline(void)
       eeprom_write_block(&confflags, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       baudtmp = OCR1A; 
       eeprom_write_block(&baudtmp, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
+      eeprom_write_byte(EEP_TABLE_SELECT_LOCATION, tableselector);
       printf_P(PSTR("Settings saved.\r\n"));
     }
 
@@ -219,6 +222,7 @@ void commandline(void)
       eeprom_read_block(&confflags, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
       set_softuart_divisor(baudtmp);
+      tableselector = eeprom_read_byte(EEP_TABLE_SELECT_LOCATION);
       printf_P(PSTR("Settings loaded.\r\n"));
     }
 
@@ -243,6 +247,9 @@ void commandline(void)
 
       printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
 	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
+
+      printf_P(PSTR("table N         Translation table number:  %u      %u\r\n"), 
+               tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
 
       printf_P(PSTR("baud N          Baud rate:                 %u     %u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
@@ -329,6 +336,20 @@ void commandline(void)
       }
     }
     
+    if(strncmp(res, "table", 6) == 0) { 
+      valid = 1;
+      res = strtok(NULL, " ");
+      if(res != NULL) { 
+	tableselector = atoi(res);
+	if ((tableselector < 0) || (tableselector > 6))  { 
+	  printf_P(PSTR("Table numbers are 0 - 6; selecting 0.\r\n"));
+	  tableselector = 0;
+	}  else
+	  printf_P(PSTR("Selected translation table #%u\r\n"), tableselector);
+      } else
+	  printf_P(PSTR("table <0-6>\r\n"));
+    }
+
     if(strncmp(res, "eedump", 7) == 0) { 
       valid = 1;
       ee_dump();
@@ -467,6 +488,18 @@ void ee_dump(void)
 void ee_wipe(void)
 {
   uint16_t i;
+
+  // this is big waste of space. 
+  static char ltrs[32] = { 0, 'E', 0x0A, 'A', ' ', 'S', 'I', 'U',
+		    0x0D, 'D', 'R', 'J', 'N', 'F', 'C', 'K',
+		    'T', 'Z', 'L', 'W', 'H', 'Y', 'P', 'Q',
+		    'O', 'B', 'G', 0, 'M', 'X', 'V', 0 };
+
+  static char figs[32] = { 0, '3', 0x0A, '-', ' ', 7, '8', '7',
+		    0x0D, '$', '4', 0x27, ',', '!', ':', '(',
+		    '5', '"', ')', '2', '#', '6', '0', '1',
+		    '9', '?', '&', 0, '.', '/', ';', 0 };
+  
   memset(buf, 0xFF, 64);
   for (i=0; i<128; i=i+64) { // only wipe first 128 bytes for now
     usb_serial_putchar('.');
@@ -477,9 +510,15 @@ void ee_wipe(void)
   eeprom_write_block(&i, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
   i = CONF_TRANSLATE | CONF_CRLF;
   eeprom_write_block(&i, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
+  // install the default ascii/baudot translation table in eeprom, for convenience
+  eeprom_write_block(&ltrs, (void *)EEP_TABLES_START, FIGS_OFFSET);
+  eeprom_write_block(&figs, (void *)(EEP_TABLES_START+FIGS_OFFSET), FIGS_OFFSET);
+  eeprom_write_byte(EEP_TABLE_SELECT_LOCATION, 0);
   i = 0x4545;  // magic number to indicate device has a configuration
   eeprom_write_block(&i, (void *)EEP_CONFIGURED_LOCATION, (size_t)EEP_CONFIGURED_SIZE);
-  printf("\r\n");
+
+  
+printf("\r\n");
 }
 
 
@@ -521,7 +560,7 @@ void set_softuart_divisor(uint16_t divisor)
 
 void help(void)
 { 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, [no]translate, [no]usos, [no]autocr, [no]8bit, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, table, [no]translate, [no]usos, [no]autocr, [no]8bit, save, load, show, exit\r\n"));
 }
 
 #ifdef EEWRITE
