@@ -235,6 +235,7 @@ void commandline(void)
       eeprom_read_block(&saved, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
 
+#ifdef SHORTENED_CONF_TEXT
       printf_P(PSTR("Setting: cur / saved\r\ntranslate:\t%c\t%c\r\n"), 
 	       (confflags & CONF_TRANSLATE)?'Y':'N', (saved & CONF_TRANSLATE)?'Y':'N');
       printf_P(PSTR("crlf:\t\t%c\t%c\r\n"),
@@ -251,9 +252,8 @@ void commandline(void)
                tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
       printf_P(PSTR("baud:\t\t%u\t%u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
+#else
 
-      
-      /* This uses up too much flash. 
       printf_P(PSTR("Settings:                                  Cur     Saved\r\n"));
 
       printf_P(PSTR("[no]translate   Translate ASCII/Baudot:    %c      %c\r\n"), 
@@ -279,7 +279,7 @@ void commandline(void)
 
       printf_P(PSTR("baud N          Baud rate:                 %u     %u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
-      */
+#endif
       
     }
 	
