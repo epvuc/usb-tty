@@ -12,8 +12,8 @@
 #define CMDBUFLEN 64
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
-#define NSPEEDS 4
-const uint16_t speeds[4][2] = { {45, 1833}, {50, 1667}, {56, 1464}, {75, 1123} };
+#define NSPEEDS 5
+const uint16_t speeds[5][2] = { {45, 1833}, {50, 1667}, {56, 1464}, {75, 1123}, {110, 757} };
 
 // function protos
 void help(void);
@@ -108,13 +108,15 @@ int main(void)
 
     // update rxbits/txbits for softuart between chars
     if (confflags & CONF_8BIT) { 
-      rxbits = 8; txbits = 10; // ?? i dunno
+      rxbits = 8; txbits = 10; // i guess?
     } else {
       rxbits = 5; txbits = 8;
     }
-    // check for break condition
+
+    // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
-      printf("[BREAK]\r\n"); // What should I actually do here? 
+      if (confflags & CONF_SHOWBREAK)
+	printf("[BREAK]\r\n"); // What should I actually do here? 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
@@ -188,6 +190,7 @@ void commandline(void)
   uint8_t n, valid;
   char *res=NULL;
 
+  softuart_turn_rx_off();
   help();
   while(1) { 
     valid = 0;
@@ -205,6 +208,7 @@ void commandline(void)
     if(strncmp(res, "exit", 5) == 0) { 
       valid = 1;
       printf_P(PSTR("Returning to adapter mode.\r\n"));
+      softuart_turn_rx_on();
       return;
     }
     // save/load/show settings
@@ -231,6 +235,25 @@ void commandline(void)
       eeprom_read_block(&saved, (const void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
       eeprom_read_block(&baudtmp, (const void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
 
+      printf_P(PSTR("Setting: cur / saved\r\ntranslate:\t%c\t%c\r\n"), 
+	       (confflags & CONF_TRANSLATE)?'Y':'N', (saved & CONF_TRANSLATE)?'Y':'N');
+      printf_P(PSTR("crlf:\t\t%c\t%c\r\n"),
+	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
+      printf_P(PSTR("autocr:\t\t%c\t%c\r\n"),
+	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
+      printf_P(PSTR("usos:\t\t%c\t%c\r\n"),
+	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
+      printf_P(PSTR("showbreak:\t%c\t%c\r\n"),
+	       (confflags & CONF_SHOWBREAK)?'Y':'N', (saved & CONF_SHOWBREAK)?'Y':'N');
+      printf_P(PSTR("8bit:\t\t%c\t%c\r\n"),
+	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
+      printf_P(PSTR("table:\t\t%u\t%u\r\n"), 
+               tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
+      printf_P(PSTR("baud:\t\t%u\t%u\r\n"), 
+               divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
+
+      
+      /* This uses up too much flash. 
       printf_P(PSTR("Settings:                                  Cur     Saved\r\n"));
 
       printf_P(PSTR("[no]translate   Translate ASCII/Baudot:    %c      %c\r\n"), 
@@ -245,6 +268,9 @@ void commandline(void)
       printf_P(PSTR("[no]usos        Unshift on space:          %c      %c\r\n"), 
 	       (confflags & CONF_UNSHIFT_ON_SPACE)?'Y':'N', (saved & CONF_UNSHIFT_ON_SPACE)?'Y':'N');
 
+      printf_P(PSTR("[no]showbreak   Display received breaks:   %c      %c\r\n"), 
+	       (confflags & CONF_SHOWBREAK)?'Y':'N', (saved & CONF_SHOWBREAK)?'Y':'N');
+
       printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
 	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
 
@@ -253,6 +279,7 @@ void commandline(void)
 
       printf_P(PSTR("baud N          Baud rate:                 %u     %u\r\n"), 
                divisor_to_baud(OCR1A), divisor_to_baud(baudtmp));
+      */
       
     }
 	
@@ -278,6 +305,17 @@ void commandline(void)
       valid = 1;
       confflags &= ~CONF_CRLF;
       printf_P(PSTR("CR & LF independent.\r\n"));
+    }
+    if(strncmp(res, "showbreak", 10) == 0) { 
+      valid = 1;
+      confflags |= CONF_SHOWBREAK;
+      printf_P(PSTR("Show break indicator.\r\n"));
+    }
+
+    if(strncmp(res, "noshowbreak", 12) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_CRLF;
+      printf_P(PSTR("Do not show break indicator.\r\n"));
     }
 
     if(strncmp(res, "8bit", 5) == 0) { 
@@ -485,20 +523,19 @@ void ee_dump(void)
   printf("\r\n");
 }
 
+const char ltrs[32] PROGMEM = { 0, 'E', 0x0A, 'A', ' ', 'S', 'I', 'U',
+			  0x0D, 'D', 'R', 'J', 'N', 'F', 'C', 'K',
+			  'T', 'Z', 'L', 'W', 'H', 'Y', 'P', 'Q',
+			  'O', 'B', 'G', 0, 'M', 'X', 'V', 0 };
+
+const char figs[32] PROGMEM = { 0, '3', 0x0A, '-', ' ', 7, '8', '7',
+			  0x0D, '$', '4', 0x27, ',', '!', ':', '(',
+			  '5', '"', ')', '2', '#', '6', '0', '1',
+			  '9', '?', '&', 0, '.', '/', ';', 0 };
+
 void ee_wipe(void)
 {
   uint16_t i;
-
-  // this is big waste of space. 
-  static char ltrs[32] = { 0, 'E', 0x0A, 'A', ' ', 'S', 'I', 'U',
-		    0x0D, 'D', 'R', 'J', 'N', 'F', 'C', 'K',
-		    'T', 'Z', 'L', 'W', 'H', 'Y', 'P', 'Q',
-		    'O', 'B', 'G', 0, 'M', 'X', 'V', 0 };
-
-  static char figs[32] = { 0, '3', 0x0A, '-', ' ', 7, '8', '7',
-		    0x0D, '$', '4', 0x27, ',', '!', ':', '(',
-		    '5', '"', ')', '2', '#', '6', '0', '1',
-		    '9', '?', '&', 0, '.', '/', ';', 0 };
   
   memset(buf, 0xFF, 64);
   for (i=0; i<128; i=i+64) { // only wipe first 128 bytes for now
@@ -508,11 +545,18 @@ void ee_wipe(void)
   // put in some sane defaults or it will hang on next boot.
   i = 1833; // 45.45 baud
   eeprom_write_block(&i, (void *)EEP_BAUDDIV_LOCATION, (size_t)EEP_BAUDDIV_SIZE);
-  i = CONF_TRANSLATE | CONF_CRLF;
+  i = CONF_TRANSLATE | CONF_CRLF | CONF_SHOWBREAK;
   eeprom_write_block(&i, (void *)EEP_CONFFLAGS_LOCATION, (size_t)EEP_CONFFLAGS_SIZE);
-  // install the default ascii/baudot translation table in eeprom, for convenience
-  eeprom_write_block(&ltrs, (void *)EEP_TABLES_START, FIGS_OFFSET);
-  eeprom_write_block(&figs, (void *)(EEP_TABLES_START+FIGS_OFFSET), FIGS_OFFSET);
+
+  // copy the default ascii/baudot translation table from flash to eeprom
+  for(i=0; i<32; i++) { 
+    eeprom_write_byte(EEP_TABLES_START + i, pgm_read_byte(&(ltrs[i])));
+    eeprom_write_byte(EEP_TABLES_START + FIGS_OFFSET + i, pgm_read_byte(&(figs[i])));
+  }
+  
+  // eeprom_write_block(&ltrs, (void *)EEP_TABLES_START, FIGS_OFFSET);
+  // eeprom_write_block(&figs, (void *)(EEP_TABLES_START+FIGS_OFFSET), FIGS_OFFSET);
+
   eeprom_write_byte(EEP_TABLE_SELECT_LOCATION, 0);
   i = 0x4545;  // magic number to indicate device has a configuration
   eeprom_write_block(&i, (void *)EEP_CONFIGURED_LOCATION, (size_t)EEP_CONFIGURED_SIZE);
@@ -560,7 +604,7 @@ void set_softuart_divisor(uint16_t divisor)
 
 void help(void)
 { 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, table, [no]translate, [no]usos, [no]autocr, [no]8bit, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, table, [no]translate, [no]usos, [no]autocr, [no]showbreak, [no]8bit, save, load, show, exit\r\n"));
 }
 
 #ifdef EEWRITE
