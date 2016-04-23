@@ -158,13 +158,17 @@ int main(void)
 	    tty_putchar_raw(char_from_usb & 0x1F);
 	}
       }
+
+#ifdef PERCENT_TO_CMDLINE
       if (char_from_usb == '%') { // just for testing.
 	softuart_turn_rx_off();
         commandline(); 
 	softuart_turn_rx_on();
         column = 0;
       }
+#endif
     }
+
 
     // Do we have a character from the TTY loop ready to send to USB?
     if (softuart_kbhit()) {
