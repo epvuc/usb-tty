@@ -1,4 +1,4 @@
-MCU          = atmega16u2
+MCU          = atmega32u2
 ARCH         = AVR8
 BOARD        = USER
 F_CPU        = 16000000
@@ -8,6 +8,7 @@ TARGET       = main
 SRC          = $(TARGET).c baudot.c softuart.c usb_serial_getstr.c Descriptors.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = ../lufa/LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/
+#CC_FLAGS += -DPERCENT_TO_CMDLINE
 # LD_FLAGS     = -Wl,-u,vfprintf -lprintf_min  # use minimal printf library which is limited but way smaller
 CC	     = avr-gcc
 
