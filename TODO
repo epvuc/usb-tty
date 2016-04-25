@@ -1,0 +1,28 @@
+softuart_kbhit() returns TRUE once per character time when in break condition, and
+returns a null. Normally you don't see this since its a null which doesn't produce
+output when translated, but if you have a null or different translation table, it
+shows as a constant stream of characters. Unclear what the right action is but this
+is probably not it. 
+
+Ideally it would be best to fix the interrupt softuart receive section to distinguish
+between a correctly framed character with all zero bits, and a break which doesn't
+have correct framing. 
+
+
+
+
+Implement some sort of auto-print-message thing to dump a block of text from eeprom
+to the tty loop. Need to decide how to trigger it though - 
+if by the onboard button, how do we ever get back to conf mode? 
+If by detecting a loop break, I have to write code to measure duration of break and
+be selective about how long of a break to consider a print trigger.
+If by typed character, people with keyboardless machines can't use it. 
+Maybe have a separate mode enabled by powering on with the button held down? 
+I hate having so many modes though. 
+
+
+
+Still no idea if 8 bit mode is usable with a real model 33. 
+
+
+
