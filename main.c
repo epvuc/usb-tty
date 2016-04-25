@@ -116,7 +116,7 @@ int main(void)
     // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
       if (confflags & CONF_SHOWBREAK)
-	printf("[BREAK]\r\n"); // What should I actually do here? 
+	printf("[BREAK]\r\n"); 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
@@ -287,7 +287,9 @@ void commandline(void)
       
     }
 	
-    // confflags settings
+    // confflags settings. This has the potential to turn into a mess, try to keep
+    // the number of config settings to a minimum, especially ones that impact each other.
+
     if(strncmp(res, "translate", 10) == 0) { 
       valid = 1;
       confflags |= CONF_TRANSLATE;
@@ -318,7 +320,7 @@ void commandline(void)
 
     if(strncmp(res, "noshowbreak", 12) == 0) { 
       valid = 1;
-      confflags &= ~CONF_CRLF;
+      confflags &= ~CONF_SHOWBREAK;
       printf_P(PSTR("Do not show break indicator.\r\n"));
     }
 
