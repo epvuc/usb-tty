@@ -126,7 +126,8 @@ int main(void)
     }
     
     // Do we have a character received from USB, to send to the TTY loop?
-    // Only pick a char from USB host if we're ready to process it. if not, it's the host's job to queue or block or whatever
+    // Only pick a char from USB host if we're ready to process it.
+    // if not, it's the host's job to queue or block or whatever.
     if (flag_tx_ready == 0) { 
       char_from_usb = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
       if (char_from_usb != 0xFF) { // CDC_Device_ReceiveByte() returns 0xFF when there's no char available.
@@ -170,7 +171,9 @@ int main(void)
     }
 
 
-    // Do we have a character from the TTY loop ready to send to USB?
+    // Now the other side: do we have a character from the TTY loop ready
+    // to send to USB? If so, process it.
+
     if (softuart_kbhit()) {
       if (confflags & CONF_TRANSLATE) 
 	char_from_tty = baudot_to_ascii(softuart_getchar());
