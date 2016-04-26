@@ -1,7 +1,8 @@
-;************************************************************
-; Windows USB CDC ACM Setup File
+;     Windows LUFA CDC ACM Setup File
 ; Copyright (c) 2000 Microsoft Corporation
-;************************************************************
+
+[DefaultInstall]
+CopyINF="usbtty_adapter.inf"
 
 [Version]
 Signature="$Windows NT$"
@@ -60,4 +61,4 @@ HKR,,EnumPropPages32,,"msports.dll,SerialPortPropPageProvider"
 ;------------------------------------------------------------------------------
 [Strings]
 MFGNAME="http://teletweety.com"
-DESCRIPTION="Teletype Adapter"
+DESCRIPTION="Teletype Interface"
