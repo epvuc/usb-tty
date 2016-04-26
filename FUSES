@@ -18,7 +18,7 @@ Lfuse: default = 0b01011110 = 0x5E
 	CKSEL1 (1) = 1
 			Lfuse = 0xDE
 
-avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0xec:m	
-avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U efuse:w:0xf4:m	
-avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U hfuse:w:0xd0:m	
-avrdude -p atmega16u2 -P /dev/ttyACM0 -c stk500v2 -e -U lfuse:w:0xde:m	
+#avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U lock:w:0xec:m	
+#avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -e -U efuse:w:0xf4:m	
+avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -U hfuse:w:0xd0:m	
+avrdude -p atmega32u2 -P /dev/ttyACM0 -c stk500v2 -U lfuse:w:0xde:m	
