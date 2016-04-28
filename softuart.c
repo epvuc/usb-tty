@@ -212,7 +212,9 @@ ISR(SOFTUART_T_COMP_LABEL)
 					qin = 0;
 				}
 			} else  // test for break condition -- EPV
-			  if ((internal_rx_buffer == 0) && (get_rx_pin_status() == 0)) framing_error = 1;
+			  // if ((internal_rx_buffer == 0) && (get_rx_pin_status() == 0)) framing_error = 1;
+			  // this fails to distinguish a null char from a break but so does a real tty, i guess
+			  if ((internal_rx_buffer == 0)) framing_error = 1;
 			  else framing_error = 0;
 		}
 		else {  // rx_test_busy
