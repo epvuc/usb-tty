@@ -8,8 +8,10 @@
 #include "softuart.h"
 #include "usb_serial_getstr.h"
 #include "conf.h"
+#include "main.h"
+
 #define EEWRITE
-#define CMDBUFLEN 64
+
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
 #define NSPEEDS 5
@@ -33,7 +35,7 @@ extern volatile unsigned char  flag_tx_ready;
 extern volatile uint8_t framing_error;
 volatile uint8_t host_break = 0;
 uint8_t tableselector = 0; // which ascii/baudot translation table we're using
-static char buf[CMDBUFLEN]; // command line input buf
+char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
@@ -423,6 +425,10 @@ void commandline(void)
     if(strncmp(res, "eewipe", 7) == 0) { 
       valid = 1;
       ee_wipe();
+    }
+    if(strncmp(res, "automsg", 8) == 0) { 
+      valid = 1;
+      create_automsg();
     }
     
 #ifdef EEWRITE
