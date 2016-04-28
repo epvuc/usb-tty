@@ -28,4 +28,10 @@ Still no idea if 8 bit mode is usable with a real model 33.
 
 Figure out if I should leave the stock Atmel DFU bootloader or install the LUFA one.
 LUFA is better because of the LED and because it can be reinstalled, but if it doesn't 
-work with FLIP in windows, I can't use it.
+work with FLIP in windows, I can't use it. ( It does, so use Atmel one, because you
+can't change fuse without erasing the builtin one, and you can't use the crystal 
+without changing fuses) 
+
+
+
+

@@ -116,7 +116,10 @@ int main(void)
     // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
       if (confflags & CONF_SHOWBREAK)
-	printf("[BREAK]\r\n"); 
+	if(confflags & CONF_AUTOPRINT)
+	  do_autoprint();
+	else
+	  printf("[BREAK]\r\n"); 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
@@ -281,6 +284,9 @@ void commandline(void)
       printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
 	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
 
+      printf_P(PSTR("[no]autoprint   autoprint  mode:           %c      %c\r\n"), 
+	       (confflags & CONF_AUTOPRINT)?'Y':'N', (saved & CONF_AUTOPRINT)?'Y':'N');
+
       printf_P(PSTR("table N         Translation table number:  %u      %u\r\n"), 
                tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
 
@@ -325,6 +331,18 @@ void commandline(void)
       valid = 1;
       confflags &= ~CONF_SHOWBREAK;
       printf_P(PSTR("Do not show break indicator.\r\n"));
+    }
+
+    if(strncmp(res, "autoprint", 10) == 0) { 
+      valid = 1;
+      confflags |= CONF_AUTOPRINT;
+      printf_P(PSTR("Print saved text on break.\r\n"));
+    }
+
+    if(strncmp(res, "noautoprint", 12) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_AUTOPRINT;
+      printf_P(PSTR("Do not print saved text on break.\r\n"));
     }
 
     if(strncmp(res, "8bit", 5) == 0) { 
