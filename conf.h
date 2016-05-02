@@ -5,6 +5,7 @@
 #define CONF_TRANSLATE	 (1<<3)
 #define CONF_8BIT	 (1<<4)
 #define CONF_SHOWBREAK	 (1<<5)
+#define CONF_AUTOPRINT   (1<<6)
 
 #define EEP_CONFIGURED_LOCATION 0
 #define EEP_CONFIGURED_SIZE 2
