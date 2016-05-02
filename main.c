@@ -8,10 +8,8 @@
 #include "softuart.h"
 #include "usb_serial_getstr.h"
 #include "conf.h"
-#include "main.h"
-
 #define EEWRITE
-
+#define CMDBUFLEN 64
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
 #define NSPEEDS 5
@@ -35,7 +33,7 @@ extern volatile unsigned char  flag_tx_ready;
 extern volatile uint8_t framing_error;
 volatile uint8_t host_break = 0;
 uint8_t tableselector = 0; // which ascii/baudot translation table we're using
-char buf[CMDBUFLEN]; // command line input buf
+static char buf[CMDBUFLEN]; // command line input buf
 uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
@@ -118,10 +116,7 @@ int main(void)
     // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
       if (confflags & CONF_SHOWBREAK)
-	if(confflags & CONF_AUTOPRINT)
-	  do_autoprint();
-	else
-	  printf("[BREAK]\r\n"); 
+	printf("[BREAK]\r\n"); 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
@@ -286,9 +281,6 @@ void commandline(void)
       printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
 	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
 
-      printf_P(PSTR("[no]autoprint   autoprint  mode:           %c      %c\r\n"), 
-	       (confflags & CONF_AUTOPRINT)?'Y':'N', (saved & CONF_AUTOPRINT)?'Y':'N');
-
       printf_P(PSTR("table N         Translation table number:  %u      %u\r\n"), 
                tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
 
@@ -333,18 +325,6 @@ void commandline(void)
       valid = 1;
       confflags &= ~CONF_SHOWBREAK;
       printf_P(PSTR("Do not show break indicator.\r\n"));
-    }
-
-    if(strncmp(res, "autoprint", 10) == 0) { 
-      valid = 1;
-      confflags |= CONF_AUTOPRINT;
-      printf_P(PSTR("Print saved text on break.\r\n"));
-    }
-
-    if(strncmp(res, "noautoprint", 12) == 0) { 
-      valid = 1;
-      confflags &= ~CONF_AUTOPRINT;
-      printf_P(PSTR("Do not print saved text on break.\r\n"));
     }
 
     if(strncmp(res, "8bit", 5) == 0) { 
@@ -425,10 +405,6 @@ void commandline(void)
     if(strncmp(res, "eewipe", 7) == 0) { 
       valid = 1;
       ee_wipe();
-    }
-    if(strncmp(res, "automsg", 8) == 0) { 
-      valid = 1;
-      create_automsg();
     }
     
 #ifdef EEWRITE
