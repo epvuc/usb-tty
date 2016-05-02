@@ -119,9 +119,11 @@ int main(void)
     // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
       if (confflags & CONF_SHOWBREAK)
-	if(confflags & CONF_AUTOPRINT)
+	if(confflags & CONF_AUTOPRINT) { 
+	  printf_P(PSTR("[Autoprinting... "));
 	  do_autoprint();
-	else
+	  printf_P(PSTR("done.]\r\n"));
+	} else
 	  printf("[BREAK]\r\n"); 
     framing_error_last = framing_error;
 
@@ -276,7 +278,7 @@ void commandline(void)
       printf_P(PSTR("[no]crlf        CR or LF --> CR+LF:        %c      %c\r\n"), 
 	       (confflags & CONF_CRLF)?'Y':'N', (saved & CONF_CRLF)?'Y':'N');
 
-      printf_P(PSTR("[no]autocr      Auto CR at end of line:    %c      %c\r\n"), 
+      printf_P(PSTR("[no]autocr      Send CRLF at end of line:  %c      %c\r\n"), 
 	       (confflags & CONF_AUTOCR)?'Y':'N', (saved & CONF_AUTOCR)?'Y':'N');
 
       printf_P(PSTR("[no]usos        Unshift on space:          %c      %c\r\n"), 

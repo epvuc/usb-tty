@@ -8,7 +8,10 @@
 #include "main.h"
 #include "usb_serial_getstr.h"
 
-// extern char *buf;
+// these are so do_autoprint() can keep processing usb events while
+// it spends potentially a long time printing text to the tty
+#include "lufa_serial.h"
+extern USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface;
 
 void do_autoprint(void)
 {
@@ -25,6 +28,8 @@ void do_autoprint(void)
     tty_putchar(c,0);
     if (c == '\r')
       tty_putchar('\n', 0);
+    CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
+    USB_USBTask();
   }
   tty_putchar('\r', 0);
   tty_putchar('\n', 0);
