@@ -6,32 +6,30 @@ is probably not it.
 
 Ideally it would be best to fix the interrupt softuart receive section to distinguish
 between a correctly framed character with all zero bits, and a break which doesn't
-have correct framing. 
-
-
-
+have correct framing. This is hard and I'm not going to get it done before shipping.
+Also, nobody will care. 
 
 Implement some sort of auto-print-message thing to dump a block of text from eeprom
-to the tty loop. Need to decide how to trigger it though - 
-if by the onboard button, how do we ever get back to conf mode? 
-If by detecting a loop break, I have to write code to measure duration of break and
-be selective about how long of a break to consider a print trigger.
-If by typed character, people with keyboardless machines can't use it. 
-Maybe have a separate mode enabled by powering on with the button held down? 
-I hate having so many modes though. 
-
+to the tty loop. --- this is done 5/1/2016. it's halfassed and only allows 512 bytes
+because it goes in the second half of eeprom on the 32u2. If you turn on autoprint
+mode and have a message stored, it will print the message when it receives a break
+on the loop. This also seems like a bad idea.
 
 
 Still no idea if 8 bit mode is usable with a real model 33. 
-
-
 
 Figure out if I should leave the stock Atmel DFU bootloader or install the LUFA one.
 LUFA is better because of the LED and because it can be reinstalled, but if it doesn't 
 work with FLIP in windows, I can't use it. ( It does, so use Atmel one, because you
 can't change fuse without erasing the builtin one, and you can't use the crystal 
 without changing fuses) 
+LUFA DFU bootloader seems entirely fine.
+
+On linux at least, if you connect USB, then press the button before ever opening the
+CDC device from the host, it will hang such that you have to power cycle.
 
 
-
-
+If you have autoprint mode enabled and power up with the adapter not connected to
+the loop, it will autoprint as soon as you plug it in. There's no way around this
+because not being connected to the loop is... a break. This may be a feature, not
+a bug.
