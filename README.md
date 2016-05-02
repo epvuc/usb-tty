@@ -1,3 +1,5 @@
+For full info and docs, see http://heepy.net/index.php/USB-teletype
+
 quickstart: 
 
 signal from loop is received on PD4, signal toward loop output on PD6
