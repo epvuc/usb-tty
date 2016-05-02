@@ -8,8 +8,11 @@
 #include "softuart.h"
 #include "usb_serial_getstr.h"
 #include "conf.h"
+#include "main.h"
+#include "autoprint.h"
+
 #define EEWRITE
-#define CMDBUFLEN 64
+
 // These are just tested values that will override specific entered values. You can
 // set any value at all, and if it's not in this list, it will just use F_CPU/64/3/X. 
 #define NSPEEDS 5
@@ -33,7 +36,7 @@ extern volatile unsigned char  flag_tx_ready;
 extern volatile uint8_t framing_error;
 volatile uint8_t host_break = 0;
 uint8_t tableselector = 0; // which ascii/baudot translation table we're using
-static char buf[CMDBUFLEN]; // command line input buf
+
 uint16_t baudtmp;
 uint8_t confflags = 0;
 uint8_t saved;
@@ -116,7 +119,10 @@ int main(void)
     // check for end of break condition
     if ((framing_error == 0) && (framing_error_last == 1)) 
       if (confflags & CONF_SHOWBREAK)
-	printf("[BREAK]\r\n"); 
+	if(confflags & CONF_AUTOPRINT)
+	  do_autoprint();
+	else
+	  printf("[BREAK]\r\n"); 
     framing_error_last = framing_error;
 
     // check if USB host is trying to send a break. 
@@ -139,7 +145,7 @@ int main(void)
 	  } else
 	    tty_putchar(char_from_usb,0);  
 	  
-	  // half-assed auto-CRLF. only works once we've seen the first newline
+	  // auto-CRLF on send. only works once we've seen the first newline
 	  if((confflags & CONF_AUTOCR)) {
 	    if(isprint(char_from_usb))
 	      column++;
@@ -196,14 +202,15 @@ void commandline(void)
 { 
   uint8_t n, valid;
   char *res=NULL;
-
+  static char buf[CMDBUFLEN]; // command line input buf
   softuart_turn_rx_off();
   help();
   while(1) { 
     valid = 0;
     printf("cmd> ");
+    memset(buf, 0, CMDBUFLEN);
     n = usb_serial_getstr(buf, CMDBUFLEN-1);
-    printf("\r\n");
+    printf_P(PSTR("\r\n"));
     if (n==0) continue;
     res=strtok(buf, " ");
     
@@ -281,6 +288,9 @@ void commandline(void)
       printf_P(PSTR("[no]8bit        8bit mode:                 %c      %c\r\n"), 
 	       (confflags & CONF_8BIT)?'Y':'N', (saved & CONF_8BIT)?'Y':'N');
 
+      printf_P(PSTR("[no]autoprint   autoprint mode:            %c      %c\r\n"), 
+	       (confflags & CONF_AUTOPRINT)?'Y':'N', (saved & CONF_AUTOPRINT)?'Y':'N');
+
       printf_P(PSTR("table N         Translation table number:  %u      %u\r\n"), 
                tableselector, eeprom_read_byte(EEP_TABLE_SELECT_LOCATION));
 
@@ -327,6 +337,18 @@ void commandline(void)
       printf_P(PSTR("Do not show break indicator.\r\n"));
     }
 
+    if(strncmp(res, "autoprint", 10) == 0) { 
+      valid = 1;
+      confflags |= CONF_AUTOPRINT;
+      printf_P(PSTR("Print saved text on break.\r\n"));
+    }
+
+    if(strncmp(res, "noautoprint", 12) == 0) { 
+      valid = 1;
+      confflags &= ~CONF_AUTOPRINT;
+      printf_P(PSTR("Do not print saved text on break.\r\n"));
+    }
+
     if(strncmp(res, "8bit", 5) == 0) { 
       valid = 1;
       confflags |= CONF_8BIT;
@@ -349,7 +371,7 @@ void commandline(void)
       confflags |= CONF_AUTOCR;
       printf_P(PSTR("Auto-CRLF at end of line.\r\n"));
     }
-    if(strncmp(res, "noautocr", 6) == 0) { 
+    if(strncmp(res, "noautocr", 9) == 0) { 
       valid = 1;
       confflags &= ~CONF_AUTOCR;
       printf_P(PSTR("No Auto-CRLF at end of line.\r\n"));
@@ -405,6 +427,10 @@ void commandline(void)
     if(strncmp(res, "eewipe", 7) == 0) { 
       valid = 1;
       ee_wipe();
+    }
+    if(strncmp(res, "automsg", 8) == 0) { 
+      valid = 1;
+      create_automsg();
     }
     
 #ifdef EEWRITE
@@ -546,10 +572,9 @@ void ee_wipe(void)
 {
   uint16_t i;
   
-  memset(buf, 0xFF, 64);
-  for (i=0; i<128; i=i+64) { // only wipe first 128 bytes for now
-    usb_serial_putchar('.');
-    eeprom_write_block(buf, (void *)i, (size_t)64);
+  for (i=0; i<128; i++) { // only wipe first 128 bytes for now
+    if(i%4 == 0) usb_serial_putchar('.');
+    eeprom_write_byte(i, 0xff);
   }
   // put in some sane defaults or it will hang on next boot.
   i = 1833; // 45.45 baud
@@ -613,7 +638,7 @@ void set_softuart_divisor(uint16_t divisor)
 
 void help(void)
 { 
-      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, table, [no]translate, [no]usos, [no]autocr, [no]showbreak, [no]8bit, save, load, show, exit\r\n"));
+      printf_P(PSTR("\r\nCommands available:\r\nhelp, baud, table, [no]translate, [no]usos, [no]autocr, [no]showbreak, [no]8bit,\r\n[no]autoprint, automsg, save, load, show, exit\r\n"));
 }
 
 #ifdef EEWRITE
