@@ -8,6 +8,7 @@ TARGET       = main
 SRC          = $(TARGET).c baudot.c softuart.c usb_serial_getstr.c autoprint.c Descriptors.c $(LUFA_SRC_USB) $(LUFA_SRC_USBCLASS)
 LUFA_PATH    = ../lufa/LUFA
 CC_FLAGS     = -DUSE_LUFA_CONFIG_HEADER -IConfig/
+CC_FLAGS += -DINCLUDE_AUTOPRINT
 #CC_FLAGS += -DPERCENT_TO_CMDLINE
 # LD_FLAGS     = -Wl,-u,vfprintf -lprintf_min  # use minimal printf library which is limited but way smaller
 CC	     = avr-gcc
@@ -18,7 +19,7 @@ CPP	     = avr-g++
 all:
 
 program: $(TARGET).hex
-	avrdude -p $(MCU) -P /dev/ttyACM0  -c avr109    -U flash:w:$(TARGET).hex
+	avrdude -p $(MCU) -c dragon_isp -B 2mhz -U flash:w:$(TARGET).hex
 
 pteensy: $(TARGET).hex
 	teensy_loader_cli -mmcu=$(MCU) -w -v $(TARGET).hex

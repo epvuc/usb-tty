@@ -1,3 +1,4 @@
+#ifdef INCLUDE_AUTOPRINT
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -63,3 +64,4 @@ void create_automsg(void)
   eeprom_write_byte(addr, 0xff);
   printf_P(PSTR("end of message.\r\n"));
 }
+#endif
